@@ -155,37 +155,16 @@ function Calendar({ onLogout }) {
   const prevMonth = useCallback(() => setCursor((c) => c.subtract(1, 'month')), [])
   const nextMonth = useCallback(() => setCursor((c) => c.add(1, 'month')), [])
 
-  // 좌우 스와이프로 이전/다음 달 이동 (모바일)
-  // 캘린더 그리드에 네이티브 touchstart/touchend(passive)를 직접 걸어
-  // 세로 스크롤과 충돌 없이(preventDefault 미사용) 가로 스와이프만 감지한다.
-  const calRef = useRef(null)
-  useEffect(() => {
-    const el = calRef.current
-    if (!el) return
-    let startX = 0
-    let startY = 0
-    const onStart = (e) => {
-      const t = e.touches[0]
-      startX = t.clientX
-      startY = t.clientY
-    }
-    const onEnd = (e) => {
-      const t = e.changedTouches[0]
-      const dx = t.clientX - startX
-      const dy = t.clientY - startY
-      // 가로 이동 50px 이상 + 가로가 세로보다 우세할 때만 월 전환
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-        if (dx < 0) nextMonth()
-        else prevMonth()
-      }
-    }
-    el.addEventListener('touchstart', onStart, { passive: true })
-    el.addEventListener('touchend', onEnd, { passive: true })
-    return () => {
-      el.removeEventListener('touchstart', onStart)
-      el.removeEventListener('touchend', onEnd)
-    }
-  }, [prevMonth, nextMonth])
+  // 좌우 스와이프로 이전/다음 달 이동 (모바일) — React 터치 이벤트로 단순 구현
+  const touchStartX = useRef(0)
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+  const onTouchEnd = (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    if (dx <= -50) nextMonth()
+    else if (dx >= 50) prevMonth()
+  }
 
   // 상세보기 → 수정 모달
   const openEdit = useCallback((p) => {
@@ -339,7 +318,11 @@ function Calendar({ onLogout }) {
       {error && <div className="banner-error">{error}</div>}
       {loading && <div className="banner">불러오는 중…</div>}
 
-      <div className="calendar" ref={calRef}>
+      <div
+        className="calendar"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         <div className="weekday-row">
           {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
             <div
