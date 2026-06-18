@@ -959,25 +959,27 @@ body {
   border-radius: 12px;
   overflow: hidden;
 }
-.bs-item.bs-dragging {
-  opacity: 0.92;
-  background: #e9e9ef;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+.bs-item.bs-selected {
+  background: #eef3ff;
 }
 .bs-grip {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 34px;
+  width: 38px;
   font-size: 18px;
   color: #b0b0b6;
-  cursor: grab;
-  touch-action: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
   user-select: none;
 }
+.bs-grip.active {
+  color: var(--primary);
+}
 .bs-grip:active {
-  cursor: grabbing;
+  opacity: 0.6;
 }
 .bs-item-main {
   display: flex;
@@ -993,6 +995,48 @@ body {
 }
 .bs-item-main:active {
   opacity: 0.7;
+}
+.bs-reorder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px 8px 0;
+}
+.bs-reorder-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bs-arrows {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+.bs-arrow {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  background: #fff;
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.bs-arrow:active {
+  background: #f0f0f3;
+}
+.bs-arrow:disabled {
+  color: #c7c7cc;
+  box-shadow: none;
+  cursor: default;
 }
 .bs-dot {
   width: 10px;

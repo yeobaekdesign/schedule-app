@@ -545,52 +545,23 @@ function DetailView({ project: p, onEdit, onDelete, onClose }) {
   )
 }
 
-// ---------------- 날짜별 일정 바텀시트 (드래그 순서 변경) ----------------
+// ---------------- 날짜별 일정 바텀시트 (↑↓ 버튼으로 순서 변경) ----------------
 function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onClose }) {
-  // 드래그 중 즉시 반영되는 로컬 순서
+  // 순서 변경이 즉시 반영되는 로컬 순서
   const [items, setItems] = useState(projects)
   useEffect(() => setItems(projects), [projects])
+  // 핸들로 선택된 항목 id (선택 시 ↑↓ 버튼 노출)
+  const [selected, setSelected] = useState(null)
 
-  const listRef = useRef(null)
-  const dragId = useRef(null)
-  const moved = useRef(false)
-  const [dragging, setDragging] = useState(null)
-
-  const onHandleDown = (e, id) => {
-    e.stopPropagation()
-    dragId.current = id
-    moved.current = false
-    setDragging(id)
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-  }
-
-  const onHandleMove = (e) => {
-    if (dragId.current == null || !listRef.current) return
-    moved.current = true
-    const rows = [...listRef.current.querySelectorAll('[data-row]')]
-    let target = rows.length - 1
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i].getBoundingClientRect()
-      if (e.clientY < r.top + r.height / 2) {
-        target = i
-        break
-      }
-    }
-    setItems((prev) => {
-      const from = prev.findIndex((it) => it.id === dragId.current)
-      if (from === -1 || from === target) return prev
-      const next = [...prev]
-      const [m] = next.splice(from, 1)
-      next.splice(target, 0, m)
-      return next
-    })
-  }
-
-  const onHandleUp = () => {
-    if (dragId.current == null) return
-    dragId.current = null
-    setDragging(null)
-    if (moved.current) onReorder(items)
+  const move = (id, dir) => {
+    const from = items.findIndex((it) => it.id === id)
+    const to = from + dir
+    if (from === -1 || to < 0 || to >= items.length) return
+    const next = [...items]
+    const [m] = next.splice(from, 1)
+    next.splice(to, 0, m)
+    setItems(next)
+    onReorder(next)
   }
 
   return (
@@ -603,50 +574,73 @@ function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onCl
             + 새 일정
           </button>
         </div>
-        <div className="bs-list" ref={listRef}>
+        <div className="bs-list">
           {items.length === 0 ? (
             <div className="bs-empty">등록된 일정이 없습니다.</div>
           ) : (
-            items.map((p) => (
-              <div
-                key={p.id}
-                data-row
-                className={`bs-item ${dragging === p.id ? 'bs-dragging' : ''}`}
-              >
-                <span
-                  className="bs-grip"
-                  onPointerDown={(e) => onHandleDown(e, p.id)}
-                  onPointerMove={onHandleMove}
-                  onPointerUp={onHandleUp}
-                  onPointerCancel={onHandleUp}
-                  aria-label="순서 변경"
-                >
-                  ⠿
-                </span>
-                <button
-                  type="button"
-                  className="bs-item-main"
-                  onClick={() => onClickProject(p)}
-                >
-                  <span
-                    className="bs-dot"
-                    style={{ backgroundColor: blockColor(p) }}
-                  />
-                  <span className="bs-item-body">
-                    <span className="bs-item-title">{p.name}</span>
-                    <span className="bs-item-sub">
-                      {p.site_name ? p.site_name + ' · ' : ''}
-                      {p.all_day
-                        ? '종일'
-                        : `${(p.start_time || '').slice(0, 5)}${
-                            p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
-                          }`}
-                    </span>
-                  </span>
-                  <span className="bs-chevron">›</span>
-                </button>
-              </div>
-            ))
+            items.map((p, i) => {
+              const isSel = selected === p.id
+              return (
+                <div key={p.id} className={`bs-item ${isSel ? 'bs-selected' : ''}`}>
+                  <button
+                    type="button"
+                    className={`bs-grip ${isSel ? 'active' : ''}`}
+                    onClick={() => setSelected(isSel ? null : p.id)}
+                    aria-label="순서 변경 선택"
+                  >
+                    ⠿
+                  </button>
+                  {isSel ? (
+                    <div className="bs-reorder">
+                      <span className="bs-reorder-title">{p.name}</span>
+                      <div className="bs-arrows">
+                        <button
+                          type="button"
+                          className="bs-arrow"
+                          onClick={() => move(p.id, -1)}
+                          disabled={i === 0}
+                          aria-label="위로"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="bs-arrow"
+                          onClick={() => move(p.id, 1)}
+                          disabled={i === items.length - 1}
+                          aria-label="아래로"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="bs-item-main"
+                      onClick={() => onClickProject(p)}
+                    >
+                      <span
+                        className="bs-dot"
+                        style={{ backgroundColor: blockColor(p) }}
+                      />
+                      <span className="bs-item-body">
+                        <span className="bs-item-title">{p.name}</span>
+                        <span className="bs-item-sub">
+                          {p.site_name ? p.site_name + ' · ' : ''}
+                          {p.all_day
+                            ? '종일'
+                            : `${(p.start_time || '').slice(0, 5)}${
+                                p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
+                              }`}
+                        </span>
+                      </span>
+                      <span className="bs-chevron">›</span>
+                    </button>
+                  )}
+                </div>
+              )
+            })
           )}
         </div>
       </div>
