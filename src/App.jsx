@@ -70,6 +70,13 @@ const HOLIDAYS = {
 const blockColor = (p) => p.site_color || p.color || DEFAULT_COLOR
 // 카테고리 (없으면 여백디자인으로 간주)
 const categoryOf = (p) => p.category || CATEGORIES[0]
+// 정렬 순서: sort_order(숫자) 우선, 없으면 시작일 → id 순
+const orderRank = (p) =>
+  typeof p.sort_order === 'number' ? p.sort_order : Number.MAX_SAFE_INTEGER
+const byOrder = (a, b) =>
+  orderRank(a) - orderRank(b) ||
+  (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0) ||
+  (a.id ?? 0) - (b.id ?? 0)
 
 const emptyForm = (category = CATEGORIES[0]) => ({
   id: null,
@@ -282,11 +289,46 @@ function Calendar({ onLogout }) {
     }
   }
 
+  // 일정 순서(드래그) 변경 → sort_order 저장 (컬럼 없으면 로컬 상태로만 유지)
+  const reorder = async (ordered) => {
+    if (!ordered || ordered.length < 2) return
+    const idRank = new Map(
+      [...projects].sort(byOrder).map((p, i) => [p.id, i])
+    )
+    // 이 날짜 항목들이 가진 정렬 키를 모아 새 순서대로 재배치
+    const keys = ordered
+      .map((p) => (typeof p.sort_order === 'number' ? p.sort_order : idRank.get(p.id)))
+      .sort((a, b) => a - b)
+    const updates = ordered.map((p, i) => ({ id: p.id, sort_order: keys[i] }))
+    // 낙관적 업데이트
+    setProjects((prev) =>
+      prev.map((p) => {
+        const u = updates.find((x) => x.id === p.id)
+        return u ? { ...p, sort_order: u.sort_order } : p
+      })
+    )
+    // 서버 저장 (sort_order 컬럼이 없으면 실패 → 로컬 상태 유지)
+    try {
+      const results = await Promise.all(
+        updates.map((u) =>
+          fetch(`${REST}?id=eq.${u.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ sort_order: u.sort_order }),
+          })
+        )
+      )
+      if (results.some((r) => !r.ok)) throw new Error('sort_order 저장 실패')
+    } catch {
+      /* sort_order 컬럼이 없거나 저장 실패: 로컬 순서만 유지 */
+    }
+  }
+
   // 달력 그리드 (일요일 시작)
   const weeks = useMemo(() => buildWeeks(cursor), [cursor])
-  // 활성 탭(카테고리)으로 필터링
+  // 활성 탭(카테고리)으로 필터링 + 정렬 순서 적용
   const visibleProjects = useMemo(
-    () => projects.filter((p) => categoryOf(p) === tab),
+    () => projects.filter((p) => categoryOf(p) === tab).sort(byOrder),
     [projects, tab]
   )
   // 반복 규칙을 반영한 날짜별 일정 맵 (보이는 6주 범위)
@@ -384,6 +426,7 @@ function Calendar({ onLogout }) {
           day={daySheet}
           projects={eventsByDate[daySheet.format(DATE_FMT)] || []}
           onClickProject={openDetail}
+          onReorder={reorder}
           onAddNew={() => {
             setDaySheet(null)
             setModal({
@@ -502,8 +545,54 @@ function DetailView({ project: p, onEdit, onDelete, onClose }) {
   )
 }
 
-// ---------------- 날짜별 일정 바텀시트 ----------------
-function DayListSheet({ day, projects, onClickProject, onAddNew, onClose }) {
+// ---------------- 날짜별 일정 바텀시트 (드래그 순서 변경) ----------------
+function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onClose }) {
+  // 드래그 중 즉시 반영되는 로컬 순서
+  const [items, setItems] = useState(projects)
+  useEffect(() => setItems(projects), [projects])
+
+  const listRef = useRef(null)
+  const dragId = useRef(null)
+  const moved = useRef(false)
+  const [dragging, setDragging] = useState(null)
+
+  const onHandleDown = (e, id) => {
+    e.stopPropagation()
+    dragId.current = id
+    moved.current = false
+    setDragging(id)
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
+
+  const onHandleMove = (e) => {
+    if (dragId.current == null || !listRef.current) return
+    moved.current = true
+    const rows = [...listRef.current.querySelectorAll('[data-row]')]
+    let target = rows.length - 1
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i].getBoundingClientRect()
+      if (e.clientY < r.top + r.height / 2) {
+        target = i
+        break
+      }
+    }
+    setItems((prev) => {
+      const from = prev.findIndex((it) => it.id === dragId.current)
+      if (from === -1 || from === target) return prev
+      const next = [...prev]
+      const [m] = next.splice(from, 1)
+      next.splice(target, 0, m)
+      return next
+    })
+  }
+
+  const onHandleUp = () => {
+    if (dragId.current == null) return
+    dragId.current = null
+    setDragging(null)
+    if (moved.current) onReorder(items)
+  }
+
   return (
     <div className="bs-backdrop" onClick={onClose}>
       <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
@@ -514,34 +603,49 @@ function DayListSheet({ day, projects, onClickProject, onAddNew, onClose }) {
             + 새 일정
           </button>
         </div>
-        <div className="bs-list">
-          {projects.length === 0 ? (
+        <div className="bs-list" ref={listRef}>
+          {items.length === 0 ? (
             <div className="bs-empty">등록된 일정이 없습니다.</div>
           ) : (
-            projects.map((p) => (
-              <button
-                type="button"
+            items.map((p) => (
+              <div
                 key={p.id}
-                className="bs-item"
-                onClick={() => onClickProject(p)}
+                data-row
+                className={`bs-item ${dragging === p.id ? 'bs-dragging' : ''}`}
               >
                 <span
-                  className="bs-dot"
-                  style={{ backgroundColor: blockColor(p) }}
-                />
-                <span className="bs-item-body">
-                  <span className="bs-item-title">{p.name}</span>
-                  <span className="bs-item-sub">
-                    {p.site_name ? p.site_name + ' · ' : ''}
-                    {p.all_day
-                      ? '종일'
-                      : `${(p.start_time || '').slice(0, 5)}${
-                          p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
-                        }`}
-                  </span>
+                  className="bs-grip"
+                  onPointerDown={(e) => onHandleDown(e, p.id)}
+                  onPointerMove={onHandleMove}
+                  onPointerUp={onHandleUp}
+                  onPointerCancel={onHandleUp}
+                  aria-label="순서 변경"
+                >
+                  ⠿
                 </span>
-                <span className="bs-chevron">›</span>
-              </button>
+                <button
+                  type="button"
+                  className="bs-item-main"
+                  onClick={() => onClickProject(p)}
+                >
+                  <span
+                    className="bs-dot"
+                    style={{ backgroundColor: blockColor(p) }}
+                  />
+                  <span className="bs-item-body">
+                    <span className="bs-item-title">{p.name}</span>
+                    <span className="bs-item-sub">
+                      {p.site_name ? p.site_name + ' · ' : ''}
+                      {p.all_day
+                        ? '종일'
+                        : `${(p.start_time || '').slice(0, 5)}${
+                            p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
+                          }`}
+                    </span>
+                  </span>
+                  <span className="bs-chevron">›</span>
+                </button>
+              </div>
             ))
           )}
         </div>

@@ -952,18 +952,47 @@ body {
 }
 .bs-item {
   display: flex;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  background: #f7f7f9;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.bs-item.bs-dragging {
+  opacity: 0.92;
+  background: #e9e9ef;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+.bs-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  font-size: 18px;
+  color: #b0b0b6;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.bs-grip:active {
+  cursor: grabbing;
+}
+.bs-item-main {
+  display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   text-align: left;
-  background: #f7f7f9;
+  background: transparent;
   border: none;
-  border-radius: 12px;
-  padding: 12px 12px;
+  padding: 12px 12px 12px 0;
   cursor: pointer;
 }
-.bs-item:active {
-  background: #ececef;
+.bs-item-main:active {
+  opacity: 0.7;
 }
 .bs-dot {
   width: 10px;
