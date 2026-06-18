@@ -45,15 +45,6 @@ const blockColor = (p) => p.site_color || p.color || DEFAULT_COLOR
 // 카테고리 (없으면 여백디자인으로 간주)
 const categoryOf = (p) => p.category || CATEGORIES[0]
 
-const REPEAT_OPTIONS = [
-  { value: 'none', label: '안 함' },
-  { value: 'daily', label: '매일' },
-  { value: 'weekly', label: '매주' },
-  { value: 'monthly', label: '매월' },
-]
-const repeatLabel = (v) =>
-  (REPEAT_OPTIONS.find((o) => o.value === v) || REPEAT_OPTIONS[0]).label
-
 const emptyForm = (category = CATEGORIES[0]) => ({
   id: null,
   name: '',
@@ -66,30 +57,17 @@ const emptyForm = (category = CATEGORIES[0]) => ({
   all_day: true,
   start_time: '09:00',
   end_time: '18:00',
-  repeat_rule: 'none',
-  show_dday: false,
-  location: '',
-  link: '',
-  todos: [],
 })
 
-// D-Day 텍스트 (시작일 기준)
-const ddayText = (p) => {
-  const diff = dayjs(p.start_date).startOf('day').diff(dayjs().startOf('day'), 'day')
-  if (diff === 0) return 'D-DAY'
-  return diff > 0 ? `D-${diff}` : `D+${-diff}`
-}
-
-// 캘린더 블록에 보여줄 라벨 (D-Day / 시간 / 제목)
+// 캘린더 블록에 보여줄 라벨 (시간 / 제목)
 const chipText = (p) => {
   const parts = []
-  if (p.show_dday) parts.push(ddayText(p))
-  else if (!p.all_day && p.start_time) parts.push(String(p.start_time).slice(0, 5))
+  if (!p.all_day && p.start_time) parts.push(String(p.start_time).slice(0, 5))
   parts.push(p.name)
   return parts.join(' ')
 }
 
-// 반복 규칙을 반영해 [gridStart, gridEnd] 범위의 날짜별 일정 맵 생성
+// [gridStart, gridEnd] 범위의 날짜별 일정 맵 생성
 function buildEventsByDate(projects, gridStart, gridEnd) {
   const byDate = {}
   const addSpan = (p, s, e) => {
@@ -102,25 +80,7 @@ function buildEventsByDate(projects, gridStart, gridEnd) {
     }
   }
   for (const p of projects) {
-    const s0 = dayjs(p.start_date)
-    const e0 = dayjs(p.end_date)
-    const dur = Math.max(0, e0.diff(s0, 'day'))
-    const rule = p.repeat_rule || 'none'
-    if (rule === 'none') {
-      addSpan(p, s0, e0)
-      continue
-    }
-    let occ = s0
-    let guard = 0
-    while (!occ.isAfter(gridEnd, 'day') && guard < 1000) {
-      const occEnd = occ.add(dur, 'day')
-      if (!occEnd.isBefore(gridStart, 'day')) addSpan(p, occ, occEnd)
-      if (rule === 'daily') occ = occ.add(1, 'day')
-      else if (rule === 'weekly') occ = occ.add(1, 'week')
-      else if (rule === 'monthly') occ = occ.add(1, 'month')
-      else break
-      guard++
-    }
+    addSpan(p, dayjs(p.start_date), dayjs(p.end_date))
   }
   return byDate
 }
@@ -182,7 +142,26 @@ function Calendar({ onLogout }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modal, setModal] = useState(null) // form object or null
+  const [daySheet, setDaySheet] = useState(null) // 바텀시트로 보여줄 날짜(dayjs) 또는 null
   const [tab, setTab] = useState(CATEGORIES[0]) // 활성 카테고리 탭
+
+  // 프로젝트 → 수정 모달 폼 (바텀시트 / 블록 클릭 공용)
+  const openEdit = useCallback((p) => {
+    setDaySheet(null)
+    setModal({
+      id: p.id,
+      name: p.name ?? '',
+      category: categoryOf(p),
+      site_name: p.site_name ?? '',
+      site_color: blockColor(p),
+      start_date: p.start_date,
+      end_date: p.end_date,
+      memo: p.memo ?? '',
+      all_day: p.all_day ?? true,
+      start_time: (p.start_time || '09:00').slice(0, 5),
+      end_time: (p.end_time || '18:00').slice(0, 5),
+    })
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -216,13 +195,6 @@ function Calendar({ onLogout }) {
       all_day: form.all_day,
       start_time: form.all_day ? null : form.start_time || null,
       end_time: form.all_day ? null : form.end_time || null,
-      repeat_rule: form.repeat_rule,
-      show_dday: form.show_dday,
-      location: form.location.trim(),
-      link: form.link.trim(),
-      todos: (form.todos || [])
-        .filter((t) => t.text.trim())
-        .map((t) => ({ text: t.text.trim(), done: !!t.done })),
     }
     try {
       let res
@@ -342,33 +314,8 @@ function Calendar({ onLogout }) {
             week={week}
             eventsByDate={eventsByDate}
             month={cursor}
-            onClickProject={(p) =>
-              setModal({
-                id: p.id,
-                name: p.name ?? '',
-                category: categoryOf(p),
-                site_name: p.site_name ?? '',
-                site_color: blockColor(p),
-                start_date: p.start_date,
-                end_date: p.end_date,
-                memo: p.memo ?? '',
-                all_day: p.all_day ?? true,
-                start_time: (p.start_time || '09:00').slice(0, 5),
-                end_time: (p.end_time || '18:00').slice(0, 5),
-                repeat_rule: p.repeat_rule || 'none',
-                show_dday: !!p.show_dday,
-                location: p.location ?? '',
-                link: p.link ?? '',
-                todos: Array.isArray(p.todos) ? p.todos : [],
-              })
-            }
-            onClickDay={(day) =>
-              setModal({
-                ...emptyForm(tab),
-                start_date: day.format(DATE_FMT),
-                end_date: day.format(DATE_FMT),
-              })
-            }
+            onClickProject={openEdit}
+            onClickDay={(day) => setDaySheet(day)}
           />
         ))}
       </div>
@@ -381,6 +328,23 @@ function Calendar({ onLogout }) {
         +
       </button>
 
+      {daySheet && (
+        <DayListSheet
+          day={daySheet}
+          projects={eventsByDate[daySheet.format(DATE_FMT)] || []}
+          onClickProject={openEdit}
+          onAddNew={() => {
+            setDaySheet(null)
+            setModal({
+              ...emptyForm(tab),
+              start_date: daySheet.format(DATE_FMT),
+              end_date: daySheet.format(DATE_FMT),
+            })
+          }}
+          onClose={() => setDaySheet(null)}
+        />
+      )}
+
       {modal && (
         <ProjectModal
           form={modal}
@@ -391,6 +355,54 @@ function Calendar({ onLogout }) {
           onDelete={remove}
         />
       )}
+    </div>
+  )
+}
+
+// ---------------- 날짜별 일정 바텀시트 ----------------
+function DayListSheet({ day, projects, onClickProject, onAddNew, onClose }) {
+  return (
+    <div className="bs-backdrop" onClick={onClose}>
+      <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="bs-handle" />
+        <div className="bs-head">
+          <span className="bs-date">{day.format('M월 D일 (ddd)')}</span>
+          <button type="button" className="bs-add" onClick={onAddNew}>
+            + 새 일정
+          </button>
+        </div>
+        <div className="bs-list">
+          {projects.length === 0 ? (
+            <div className="bs-empty">등록된 일정이 없습니다.</div>
+          ) : (
+            projects.map((p) => (
+              <button
+                type="button"
+                key={p.id}
+                className="bs-item"
+                onClick={() => onClickProject(p)}
+              >
+                <span
+                  className="bs-dot"
+                  style={{ backgroundColor: blockColor(p) }}
+                />
+                <span className="bs-item-body">
+                  <span className="bs-item-title">{p.name}</span>
+                  <span className="bs-item-sub">
+                    {p.site_name ? p.site_name + ' · ' : ''}
+                    {p.all_day
+                      ? '종일'
+                      : `${(p.start_time || '').slice(0, 5)}${
+                          p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
+                        }`}
+                  </span>
+                </span>
+                <span className="bs-chevron">›</span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -416,7 +428,6 @@ const MAX_VISIBLE = 4
 
 function WeekRow({ week, eventsByDate, month, onClickProject, onClickDay }) {
   const today = dayjs()
-  const [expanded, setExpanded] = useState(null) // 펼친 날짜 key
 
   return (
     <div className="week-row">
@@ -424,11 +435,11 @@ function WeekRow({ week, eventsByDate, month, onClickProject, onClickDay }) {
         const dayKey = day.format(DATE_FMT)
         const inMonth = day.month() === month.month()
         const isToday = day.isSame(today, 'day')
-        // 이 날짜에 진행 중인 공사들 (반복 포함, 날짜별 맵에서 조회)
+        // 이 날짜에 진행 중인 공사들 (날짜별 맵에서 조회)
         const dayProjects = eventsByDate[dayKey] || []
-        const isExpanded = expanded === dayKey
+        // 최대 4개까지 블록 표시, 5개 이상이면 "+N개 더"
         const visible =
-          isExpanded || dayProjects.length <= MAX_VISIBLE
+          dayProjects.length <= MAX_VISIBLE
             ? dayProjects
             : dayProjects.slice(0, MAX_VISIBLE)
         const hidden = dayProjects.length - visible.length
@@ -459,17 +470,7 @@ function WeekRow({ week, eventsByDate, month, onClickProject, onClickDay }) {
                   {chipText(p)}
                 </div>
               ))}
-              {hidden > 0 && (
-                <div
-                  className="event-more"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setExpanded(dayKey)
-                  }}
-                >
-                  +{hidden}개 더보기
-                </div>
-              )}
+              {hidden > 0 && <div className="event-more">+{hidden}개 더</div>}
             </div>
           </div>
         )
@@ -485,14 +486,6 @@ function CalIcon() {
       <rect x="3" y="4.5" width="18" height="16" rx="3" stroke="currentColor" strokeWidth="1.6" />
       <path d="M3 9h18" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
-}
-function PinIcon() {
-  return (
-    <svg className="row-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   )
 }
@@ -522,21 +515,6 @@ function ClockIcon() {
     </svg>
   )
 }
-function RepeatIcon() {
-  return (
-    <svg className="row-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 9a6 6 0 0 1 6-6h5l-2-2m2 2-2 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M20 15a6 6 0 0 1-6 6H9l2 2m-2-2 2-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function FlagIcon() {
-  return (
-    <svg className="row-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 21V4M6 4h11l-2 4 2 4H6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 function SiteIcon() {
   return (
     <svg className="row-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -545,23 +523,6 @@ function SiteIcon() {
     </svg>
   )
 }
-function LinkIcon() {
-  return (
-    <svg className="row-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 1 0-5.66-5.66l-1.5 1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 1 0 5.66 5.66l1.5-1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function TodoIcon() {
-  return (
-    <svg className="row-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 6.5l2 2 3-3.5M4 13.5l2 2 3-3.5M4 20l2 2 3-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13 6h7M13 13h7M13 20h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 // iOS 스타일 토글 스위치
 function Toggle({ on, onChange }) {
   return (
@@ -676,21 +637,6 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
     set('category', CATEGORIES[(idx + 1) % CATEGORIES.length])
   }
 
-  // 반복 규칙 순환 (안 함 → 매일 → 매주 → 매월)
-  const cycleRepeat = () => {
-    const idx = REPEAT_OPTIONS.findIndex((o) => o.value === form.repeat_rule)
-    set('repeat_rule', REPEAT_OPTIONS[(idx + 1) % REPEAT_OPTIONS.length].value)
-  }
-
-  // To-Do 항목 조작
-  const todos = form.todos || []
-  const setTodos = (next) => set('todos', next)
-  const addTodo = () => setTodos([...todos, { text: '', done: false }])
-  const updateTodo = (i, patch) =>
-    setTodos(todos.map((t, idx) => (idx === i ? { ...t, ...patch } : t)))
-  const removeTodo = (i) => setTodos(todos.filter((_, idx) => idx !== i))
-
-
   const submit = (e) => {
     e.preventDefault()
     if (!form.name.trim()) {
@@ -780,25 +726,6 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
                 />
               </div>
             </div>
-
-            <button type="button" className="list-row tappable" onClick={cycleRepeat}>
-              <span className="row-ic"><RepeatIcon /></span>
-              <span className="row-value">반복</span>
-              <span className="row-secondary">{repeatLabel(form.repeat_rule)}</span>
-              <span className="row-chevron">›</span>
-            </button>
-          </div>
-
-          {/* D-Day */}
-          <div className="list-group">
-            <div className="list-row">
-              <span className="row-ic"><FlagIcon /></span>
-              <span className="row-value">
-                D-Day 표시
-                {form.show_dday && <span className="dday-preview">{ddayText(form)}</span>}
-              </span>
-              <Toggle on={form.show_dday} onChange={(v) => set('show_dday', v)} />
-            </div>
           </div>
 
           {/* 현장명 + 현장색상 */}
@@ -836,39 +763,6 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
             </div>
           </div>
 
-          {/* 장소 + 링크 */}
-          <div className="list-group">
-            <div className="list-row">
-              <span className="row-ic"><PinIcon /></span>
-              <input
-                className="row-input"
-                value={form.location}
-                onChange={(e) => set('location', e.target.value)}
-                placeholder="장소"
-              />
-            </div>
-            <div className="list-row">
-              <span className="row-ic"><LinkIcon /></span>
-              <input
-                className="row-input"
-                type="url"
-                value={form.link}
-                onChange={(e) => set('link', e.target.value)}
-                placeholder="링크 (https://...)"
-              />
-              {form.link.trim() && (
-                <a
-                  className="row-open"
-                  href={form.link}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  열기
-                </a>
-              )}
-            </div>
-          </div>
-
           {/* 메모 */}
           <div className="list-group">
             <div className="list-row list-row-textarea">
@@ -881,48 +775,6 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
                 rows={3}
               />
             </div>
-          </div>
-
-          {/* To-Do 리스트 */}
-          <div className="list-group">
-            <div className="list-row">
-              <span className="row-ic"><TodoIcon /></span>
-              <span className="row-value">To-Do 리스트</span>
-              {todos.length > 0 && (
-                <span className="row-secondary">
-                  {todos.filter((t) => t.done).length}/{todos.length}
-                </span>
-              )}
-            </div>
-            {todos.map((t, i) => (
-              <div className="list-row todo-row" key={i}>
-                <button
-                  type="button"
-                  className={`todo-check ${t.done ? 'done' : ''}`}
-                  onClick={() => updateTodo(i, { done: !t.done })}
-                  aria-label="완료"
-                >
-                  {t.done ? '✓' : ''}
-                </button>
-                <input
-                  className={`row-input ${t.done ? 'todo-done' : ''}`}
-                  value={t.text}
-                  onChange={(e) => updateTodo(i, { text: e.target.value })}
-                  placeholder="할 일"
-                />
-                <button
-                  type="button"
-                  className="todo-del"
-                  onClick={() => removeTodo(i)}
-                  aria-label="삭제"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            <button type="button" className="list-row todo-add" onClick={addTodo}>
-              + 항목 추가
-            </button>
           </div>
 
           {/* 삭제 */}
