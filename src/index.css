@@ -503,13 +503,18 @@ body {
   gap: 8px;
 }
 .date-pill {
-  position: relative;
   background: #f0f0f3;
+  border: none;
   border-radius: 9px;
   padding: 8px 14px;
+  font-family: inherit;
   font-size: 15px;
   font-weight: 500;
   color: var(--text);
+  cursor: pointer;
+}
+.date-pill:active {
+  background: #e4e4ea;
 }
 .time-pill {
   background: #f0f0f3;
@@ -521,14 +526,108 @@ body {
   font-weight: 500;
   color: var(--text);
 }
-.date-native {
-  position: absolute;
+
+/* 클릭형 달력 날짜 선택기 팝업 */
+.dp {
+  position: relative;
+}
+.dp-backdrop {
+  position: fixed;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
+  z-index: 200;
+}
+.dp-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 201;
+  width: 280px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--border);
+  padding: 12px;
+}
+.dp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.dp-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+.dp-nav {
+  width: 32px;
+  height: 32px;
   border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 20px;
+  color: var(--text);
   cursor: pointer;
+}
+.dp-nav:active {
+  background: #f0f0f3;
+}
+.dp-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+.dp-wd {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 0;
+}
+.dp-wd.sun {
+  color: var(--sun);
+}
+.dp-wd.sat {
+  color: var(--sat);
+}
+.dp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+.dp-day {
+  aspect-ratio: 1;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+.dp-day:hover {
+  background: #f0f0f3;
+}
+.dp-day.sun {
+  color: var(--sun);
+}
+.dp-day.sat {
+  color: var(--sat);
+}
+.dp-day.dp-out {
+  color: #c7c7cc;
+}
+.dp-day.dp-today {
+  font-weight: 700;
+  color: var(--primary);
+}
+.dp-day.dp-sel {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+.dp-day.dp-sel:hover {
+  background: var(--primary-dark);
 }
 
 /* 보조 텍스트 (반복 값, To-Do 카운트 등) */

@@ -577,6 +577,87 @@ function Toggle({ on, onChange }) {
   )
 }
 
+// 클릭형 달력 날짜 선택기 (input type=date 대체)
+function DatePicker({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const selected = dayjs(value)
+  const [view, setView] = useState(() => selected.startOf('month'))
+
+  const openPicker = () => {
+    setView(selected.startOf('month'))
+    setOpen(true)
+  }
+  const pick = (day) => {
+    onChange(day.format(DATE_FMT))
+    setOpen(false)
+  }
+
+  const days = buildWeeks(view).flat()
+
+  return (
+    <div className="dp">
+      <button type="button" className="date-pill" onClick={openPicker}>
+        {selected.format('YYYY년 M월 D일 (ddd)')}
+      </button>
+      {open && (
+        <>
+          <div className="dp-backdrop" onClick={() => setOpen(false)} />
+          <div className="dp-pop" onClick={(e) => e.stopPropagation()}>
+            <div className="dp-head">
+              <button
+                type="button"
+                className="dp-nav"
+                onClick={() => setView(view.subtract(1, 'month'))}
+                aria-label="이전 달"
+              >
+                ‹
+              </button>
+              <span className="dp-title">{view.format('YYYY년 M월')}</span>
+              <button
+                type="button"
+                className="dp-nav"
+                onClick={() => setView(view.add(1, 'month'))}
+                aria-label="다음 달"
+              >
+                ›
+              </button>
+            </div>
+            <div className="dp-weekdays">
+              {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
+                <span key={d} className={`dp-wd ${i === 0 ? 'sun' : ''} ${i === 6 ? 'sat' : ''}`}>
+                  {d}
+                </span>
+              ))}
+            </div>
+            <div className="dp-grid">
+              {days.map((day, idx) => {
+                const inMonth = day.month() === view.month()
+                const isSel = day.isSame(selected, 'day')
+                const isToday = day.isSame(dayjs(), 'day')
+                const dow = day.day()
+                return (
+                  <button
+                    type="button"
+                    key={idx}
+                    className={`dp-day ${inMonth ? '' : 'dp-out'} ${
+                      isSel ? 'dp-sel' : ''
+                    } ${isToday && !isSel ? 'dp-today' : ''} ${
+                      dow === 0 ? 'sun' : ''
+                    } ${dow === 6 ? 'sat' : ''}`}
+                    onClick={() => pick(day)}
+                  >
+                    {day.date()}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 const catBadge = (c) => (c === '여백디자인' ? 'YEOBEAK' : c)
 
 // ---------------- 등록/수정 모달 (참고 디자인 풀스크린) ----------------
@@ -609,7 +690,6 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
     setTodos(todos.map((t, idx) => (idx === i ? { ...t, ...patch } : t)))
   const removeTodo = (i) => setTodos(todos.filter((_, idx) => idx !== i))
 
-  const fmtDate = (d) => dayjs(d).format('YYYY년 M월 D일 (ddd)')
 
   const submit = (e) => {
     e.preventDefault()
@@ -665,7 +745,7 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
               <Toggle on={form.all_day} onChange={(v) => set('all_day', v)} />
             </div>
 
-            <label className="list-row date-row">
+            <div className="list-row date-row">
               <span className="row-label indent">시작</span>
               <div className="date-controls">
                 {!form.all_day && (
@@ -676,19 +756,14 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
                     onChange={(e) => set('start_time', e.target.value)}
                   />
                 )}
-                <span className="date-pill">
-                  {fmtDate(form.start_date)}
-                  <input
-                    type="date"
-                    className="date-native"
-                    value={form.start_date}
-                    onChange={(e) => set('start_date', e.target.value)}
-                  />
-                </span>
+                <DatePicker
+                  value={form.start_date}
+                  onChange={(v) => set('start_date', v)}
+                />
               </div>
-            </label>
+            </div>
 
-            <label className="list-row date-row">
+            <div className="list-row date-row">
               <span className="row-label indent">종료</span>
               <div className="date-controls">
                 {!form.all_day && (
@@ -699,17 +774,12 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
                     onChange={(e) => set('end_time', e.target.value)}
                   />
                 )}
-                <span className="date-pill">
-                  {fmtDate(form.end_date)}
-                  <input
-                    type="date"
-                    className="date-native"
-                    value={form.end_date}
-                    onChange={(e) => set('end_date', e.target.value)}
-                  />
-                </span>
+                <DatePicker
+                  value={form.end_date}
+                  onChange={(v) => set('end_date', v)}
+                />
               </div>
-            </label>
+            </div>
 
             <button type="button" className="list-row tappable" onClick={cycleRepeat}>
               <span className="row-ic"><RepeatIcon /></span>
