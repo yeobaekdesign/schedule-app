@@ -1,0 +1,728 @@
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --border: #e5e5ea;
+  --text: #000000;
+  --muted: #8e8e93;
+  --primary: #007aff;
+  --primary-dark: #0066d6;
+  --danger: #ff3b30;
+  --sun: #ff3b30;
+  --sat: #007aff;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Apple SD Gothic Neo', 'Pretendard', 'Helvetica Neue', Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 버튼 ---------- */
+.btn {
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s, transform 0.05s;
+  white-space: nowrap;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover {
+  background: #f8fafc;
+  color: var(--text);
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover {
+  opacity: 0.9;
+}
+
+/* ---------- 로그인 ---------- */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  padding: 20px;
+}
+.login-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 40px 32px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+.login-logo {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--text);
+}
+.login-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.login-input {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+  text-align: center;
+  letter-spacing: 4px;
+}
+.login-input:focus {
+  border-color: var(--primary);
+}
+.login-error {
+  color: var(--danger);
+  font-size: 13px;
+}
+.login-btn {
+  margin-top: 4px;
+  padding: 12px;
+}
+
+/* ---------- 상단바 ---------- */
+.app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 14px 12px 80px;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.month-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.month-title .caret {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  position: relative;
+  top: -2px;
+}
+.topbar-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.icon-btn {
+  height: 34px;
+  min-width: 34px;
+  padding: 0 8px;
+  border-radius: 17px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn:active {
+  background: #f0f0f3;
+}
+.icon-btn.today-dot {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* ---------- 카테고리 탭 (참고 디자인 알약형) ---------- */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 18px;
+  padding: 7px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab.active {
+  background: #1c1c1e;
+  border-color: #1c1c1e;
+  color: #fff;
+}
+.tab-check {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* ---------- 배너 ---------- */
+.banner,
+.banner-error {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.banner {
+  background: #eff6ff;
+  color: var(--primary-dark);
+}
+.banner-error {
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+/* ---------- 캘린더 ---------- */
+.calendar {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.weekday-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.weekday {
+  text-align: center;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.weekday.sun {
+  color: var(--sun);
+}
+.weekday.sat {
+  color: var(--sat);
+}
+
+.week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.day-cell {
+  min-height: 104px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 3px 2px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.day-cell.today {
+  background: #f4f4f6;
+}
+.day-cell.out-month .day-num {
+  color: #c7c7cc;
+}
+.day-num {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  margin: 1px 0 1px 2px;
+}
+.day-cell.sun .day-num {
+  color: var(--sun);
+}
+.day-cell.sat .day-num {
+  color: var(--sat);
+}
+.day-cell.out-month.sun .day-num,
+.day-cell.out-month.sat .day-num {
+  color: #c7c7cc;
+}
+.day-num.today {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+/* 날짜 셀마다 표시되는 공사 블록 (참고 디자인: 꽉 찬 색 막대) */
+.day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+.event-chip {
+  height: 16px;
+  line-height: 16px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  padding: 0 3px;
+  border-radius: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.2px;
+}
+.event-chip:active {
+  opacity: 0.8;
+}
+.event-more {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 3px;
+  cursor: pointer;
+}
+.event-more:active {
+  opacity: 0.6;
+}
+
+/* ---------- iOS 풀스크린 시트 모달 ---------- */
+.sheet {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+.sheet-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 상단바 */
+.sheet-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #fff;
+}
+.sheet-x {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+.sheet-x:active {
+  opacity: 0.5;
+}
+.sheet-save {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.sheet-save:active {
+  background: #f2f2f7;
+}
+
+/* 본문 */
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  max-width: 620px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 6px 18px 60px;
+}
+
+/* 제목 입력 */
+.title-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  padding: 8px 0 22px;
+  color: var(--text);
+}
+.title-input::placeholder {
+  color: #c4c4cc;
+}
+
+/* 리스트 그룹 */
+.list-group {
+  border-bottom: 8px solid #f3f3f5;
+}
+.list-group:last-child {
+  border-bottom: none;
+}
+.list-row {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: 17px;
+  color: var(--text);
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  font-family: inherit;
+}
+.list-row:last-child {
+  border-bottom: none;
+}
+.list-row.tappable {
+  border: none;
+  cursor: pointer;
+}
+.row-ic {
+  display: inline-flex;
+  color: #1c1c1e;
+}
+.row-icon {
+  width: 24px;
+  height: 24px;
+}
+.row-label {
+  color: var(--text);
+  font-size: 17px;
+}
+.row-label.indent {
+  margin-left: 38px;
+}
+.row-value {
+  flex: 1;
+  font-size: 17px;
+  font-weight: 500;
+}
+.cat-badge {
+  background: #1c1c1e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.row-chevron {
+  color: #c7c7cc;
+  font-size: 22px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+.row-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 17px;
+  color: var(--text);
+  padding: 16px 0;
+}
+.row-input::placeholder,
+.row-textarea::placeholder {
+  color: #c4c4cc;
+}
+
+/* 날짜 행 (회색 알약 + 투명 네이티브 picker) */
+.date-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.date-pill {
+  position: relative;
+  background: #f0f0f3;
+  border-radius: 9px;
+  padding: 8px 14px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+.time-pill {
+  background: #f0f0f3;
+  border: none;
+  border-radius: 9px;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+.date-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: none;
+  cursor: pointer;
+}
+
+/* 보조 텍스트 (반복 값, To-Do 카운트 등) */
+.row-secondary {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 16px;
+}
+.row-secondary + .row-chevron {
+  margin-left: 4px;
+}
+.dday-preview {
+  margin-left: 8px;
+  background: #1c1c1e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+.row-open {
+  margin-left: auto;
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* iOS 토글 스위치 */
+.switch {
+  margin-left: auto;
+  width: 51px;
+  height: 31px;
+  border-radius: 16px;
+  border: none;
+  background: #e4e4ea;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+}
+.switch.on {
+  background: #1c1c1e;
+}
+.switch .knob {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s;
+}
+.switch.on .knob {
+  transform: translateX(20px);
+}
+
+/* To-Do 리스트 */
+.todo-row {
+  gap: 10px;
+}
+.todo-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.8px solid #c7c7cc;
+  background: #fff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.todo-check.done {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.todo-done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.todo-del {
+  border: none;
+  background: transparent;
+  color: #c7c7cc;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px;
+}
+.todo-del:active {
+  color: var(--danger);
+}
+.todo-add {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 16px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+.todo-add:active {
+  opacity: 0.5;
+}
+
+.list-row-textarea {
+  align-items: flex-start;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+.row-textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 17px;
+  color: var(--text);
+  resize: none;
+  padding-top: 2px;
+}
+.list-row-color {
+  flex-wrap: wrap;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: auto;
+}
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.color-swatch.selected {
+  box-shadow: 0 0 0 2px #fff inset, 0 0 0 4px currentColor;
+  border-color: transparent;
+}
+.row-delete {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  font-size: 17px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  justify-content: center;
+}
+.row-delete:active {
+  opacity: 0.5;
+}
+
+/* ---------- 플로팅 등록 버튼 ---------- */
+.fab {
+  position: fixed;
+  right: 22px;
+  bottom: 26px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #1c1c1e;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  z-index: 50;
+}
+.fab:active {
+  transform: scale(0.94);
+}
+
+/* ---------- 반응형 ---------- */
+@media (max-width: 640px) {
+  .app {
+    padding: 12px 8px 80px;
+  }
+  .day-cell {
+    min-height: 88px;
+  }
+  .month-title {
+    font-size: 22px;
+  }
+}
