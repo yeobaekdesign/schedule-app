@@ -545,23 +545,61 @@ function DetailView({ project: p, onEdit, onDelete, onClose }) {
   )
 }
 
-// ---------------- 날짜별 일정 바텀시트 (↑↓ 버튼으로 순서 변경) ----------------
+// ---------------- 날짜별 일정 바텀시트 (드래그로 순서 변경) ----------------
 function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onClose }) {
   // 순서 변경이 즉시 반영되는 로컬 순서
   const [items, setItems] = useState(projects)
   useEffect(() => setItems(projects), [projects])
-  // 핸들로 선택된 항목 id (선택 시 ↑↓ 버튼 노출)
-  const [selected, setSelected] = useState(null)
+  const [dragId, setDragId] = useState(null)
 
-  const move = (id, dir) => {
-    const from = items.findIndex((it) => it.id === id)
-    const to = from + dir
-    if (from === -1 || to < 0 || to >= items.length) return
-    const next = [...items]
-    const [m] = next.splice(from, 1)
-    next.splice(to, 0, m)
-    setItems(next)
-    onReorder(next)
+  // 공통: id 기준으로 한 항목을 다른 항목 위치로 이동
+  const moveItem = (fromId, toId) => {
+    if (fromId == null || toId == null || fromId === toId) return
+    setItems((prev) => {
+      const from = prev.findIndex((x) => String(x.id) === String(fromId))
+      const to = prev.findIndex((x) => String(x.id) === String(toId))
+      if (from === -1 || to === -1 || from === to) return prev
+      const next = [...prev]
+      const [m] = next.splice(from, 1)
+      next.splice(to, 0, m)
+      return next
+    })
+  }
+
+  // ---- 데스크톱: HTML5 draggable ----
+  const onDragStart = (e, id) => {
+    setDragId(id)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  const onDragOver = (e, overId) => {
+    e.preventDefault()
+    moveItem(dragId, overId)
+  }
+  const onDrop = (e) => {
+    e.preventDefault()
+    setDragId(null)
+    onReorder(items)
+  }
+  const onDragEnd = () => setDragId(null)
+
+  // ---- 모바일: 터치 이벤트 ----
+  const touchId = useRef(null)
+  const onTouchStart = (id) => {
+    touchId.current = id
+    setDragId(id)
+  }
+  const onTouchMove = (e) => {
+    if (touchId.current == null) return
+    const t = e.touches[0]
+    const el = document.elementFromPoint(t.clientX, t.clientY)
+    const row = el && el.closest('[data-row]')
+    if (row) moveItem(touchId.current, row.getAttribute('data-id'))
+  }
+  const onTouchEnd = () => {
+    if (touchId.current == null) return
+    touchId.current = null
+    setDragId(null)
+    onReorder(items)
   }
 
   return (
@@ -578,69 +616,52 @@ function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onCl
           {items.length === 0 ? (
             <div className="bs-empty">등록된 일정이 없습니다.</div>
           ) : (
-            items.map((p, i) => {
-              const isSel = selected === p.id
-              return (
-                <div key={p.id} className={`bs-item ${isSel ? 'bs-selected' : ''}`}>
-                  <button
-                    type="button"
-                    className={`bs-grip ${isSel ? 'active' : ''}`}
-                    onClick={() => setSelected(isSel ? null : p.id)}
-                    aria-label="순서 변경 선택"
-                  >
-                    ⠿
-                  </button>
-                  {isSel ? (
-                    <div className="bs-reorder">
-                      <span className="bs-reorder-title">{p.name}</span>
-                      <div className="bs-arrows">
-                        <button
-                          type="button"
-                          className="bs-arrow"
-                          onClick={() => move(p.id, -1)}
-                          disabled={i === 0}
-                          aria-label="위로"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="bs-arrow"
-                          onClick={() => move(p.id, 1)}
-                          disabled={i === items.length - 1}
-                          aria-label="아래로"
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="bs-item-main"
-                      onClick={() => onClickProject(p)}
-                    >
-                      <span
-                        className="bs-dot"
-                        style={{ backgroundColor: blockColor(p) }}
-                      />
-                      <span className="bs-item-body">
-                        <span className="bs-item-title">{p.name}</span>
-                        <span className="bs-item-sub">
-                          {p.site_name ? p.site_name + ' · ' : ''}
-                          {p.all_day
-                            ? '종일'
-                            : `${(p.start_time || '').slice(0, 5)}${
-                                p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
-                              }`}
-                        </span>
-                      </span>
-                      <span className="bs-chevron">›</span>
-                    </button>
-                  )}
-                </div>
-              )
-            })
+            items.map((p) => (
+              <div
+                key={p.id}
+                data-row
+                data-id={p.id}
+                className={`bs-item ${dragId === p.id ? 'bs-dragging' : ''}`}
+                draggable
+                onDragStart={(e) => onDragStart(e, p.id)}
+                onDragOver={(e) => onDragOver(e, p.id)}
+                onDrop={onDrop}
+                onDragEnd={onDragEnd}
+              >
+                <span
+                  className="bs-grip"
+                  onTouchStart={() => onTouchStart(p.id)}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEnd}
+                  onTouchCancel={onTouchEnd}
+                  aria-label="순서 변경 핸들"
+                >
+                  ⠿
+                </span>
+                <button
+                  type="button"
+                  className="bs-item-main"
+                  onClick={() => onClickProject(p)}
+                >
+                  <span
+                    className="bs-dot"
+                    style={{ backgroundColor: blockColor(p) }}
+                  />
+                  <span className="bs-item-body">
+                    <span className="bs-item-title">{p.name}</span>
+                    <span className="bs-item-sub">
+                      {p.site_name ? p.site_name + ' · ' : ''}
+                      {p.all_day
+                        ? '종일'
+                        : `${(p.start_time || '').slice(0, 5)}${
+                            p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
+                          }`}
+                    </span>
+                  </span>
+                  <span className="bs-chevron">›</span>
+                </button>
+              </div>
+            ))
           )}
         </div>
       </div>

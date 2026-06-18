@@ -14,7 +14,8 @@
       "Bash(netlify deploy *)",
       "Bash(git commit -q -m ' *)",
       "Bash(git push *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(netlify status *)"
     ]
   }
 }
