@@ -40,6 +40,30 @@ const DATE_FMT = 'YYYY-MM-DD'
 const CATEGORIES = ['여백디자인', '개인']
 const DEFAULT_COLOR = COLORS[6]
 
+// 한국 공휴일 + 대체공휴일 (2026년, 하드코딩)
+const HOLIDAYS = {
+  '2026-01-01': '신정',
+  '2026-02-16': '설날',
+  '2026-02-17': '설날',
+  '2026-02-18': '설날',
+  '2026-03-01': '삼일절',
+  '2026-03-02': '대체공휴일',
+  '2026-05-05': '어린이날',
+  '2026-05-24': '부처님오신날',
+  '2026-05-25': '대체공휴일',
+  '2026-06-06': '현충일',
+  '2026-08-15': '광복절',
+  '2026-08-17': '대체공휴일',
+  '2026-09-24': '추석',
+  '2026-09-25': '추석',
+  '2026-09-26': '추석',
+  '2026-09-28': '대체공휴일',
+  '2026-10-03': '개천절',
+  '2026-10-05': '대체공휴일',
+  '2026-10-09': '한글날',
+  '2026-12-25': '크리스마스',
+}
+
 // 일정의 블록 색상 = 현장색상 (없으면 기존 color, 그것도 없으면 기본)
 const blockColor = (p) => p.site_color || p.color || DEFAULT_COLOR
 // 카테고리 (없으면 여백디자인으로 간주)
@@ -552,6 +576,7 @@ function WeekRow({ week, eventsByDate, month, onClickDay }) {
         const dayKey = day.format(DATE_FMT)
         const inMonth = day.month() === month.month()
         const isToday = day.isSame(today, 'day')
+        const holiday = HOLIDAYS[dayKey]
         // 이 날짜에 진행 중인 공사들 (날짜별 맵에서 조회)
         const dayProjects = eventsByDate[dayKey] || []
         // 최대 4개까지 블록 표시, 5개 이상이면 "+N개 더"
@@ -566,12 +591,15 @@ function WeekRow({ week, eventsByDate, month, onClickDay }) {
             key={di}
             className={`day-cell ${inMonth ? '' : 'out-month'} ${
               isToday ? 'today' : ''
-            } ${di === 0 ? 'sun' : ''} ${di === 6 ? 'sat' : ''}`}
+            } ${di === 0 ? 'sun' : ''} ${di === 6 ? 'sat' : ''} ${
+              holiday ? 'holiday' : ''
+            }`}
             onClick={() => onClickDay(day)}
           >
             <span className={`day-num ${isToday ? 'today' : ''}`}>
               {day.date()}
             </span>
+            {holiday && <span className="holiday-name">{holiday}</span>}
             <div className="day-events">
               {visible.map((p) => (
                 <div

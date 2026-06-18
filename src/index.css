@@ -305,6 +305,25 @@ body {
   font-weight: 700;
 }
 
+/* 공휴일: 날짜 숫자 빨강 + 아래 작은 빨간 글씨 */
+.day-cell.holiday .day-num {
+  color: #ff3b30;
+}
+.day-cell.holiday .day-num.today {
+  color: #fff;
+}
+.holiday-name {
+  font-size: 9px;
+  line-height: 1.1;
+  font-weight: 600;
+  color: #ff3b30;
+  margin: -1px 0 1px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 /* 날짜 셀마다 표시되는 공사 블록 (참고 디자인: 꽉 찬 색 막대) */
 .day-events {
   display: flex;
@@ -325,6 +344,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.2px;
+  text-align: center;
 }
 .event-chip:active {
   opacity: 0.8;
