@@ -156,23 +156,36 @@ function Calendar({ onLogout }) {
   const nextMonth = useCallback(() => setCursor((c) => c.add(1, 'month')), [])
 
   // 좌우 스와이프로 이전/다음 달 이동 (모바일)
-  const touch = useRef(null)
-  const onTouchStart = (e) => {
-    const t = e.touches[0]
-    touch.current = { x: t.clientX, y: t.clientY }
-  }
-  const onTouchEnd = (e) => {
-    if (!touch.current) return
-    const t = e.changedTouches[0]
-    const dx = t.clientX - touch.current.x
-    const dy = t.clientY - touch.current.y
-    touch.current = null
-    // 가로 이동이 충분히 크고 세로보다 우세할 때만 월 전환
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      if (dx < 0) nextMonth()
-      else prevMonth()
+  // 캘린더 그리드에 네이티브 touchstart/touchend(passive)를 직접 걸어
+  // 세로 스크롤과 충돌 없이(preventDefault 미사용) 가로 스와이프만 감지한다.
+  const calRef = useRef(null)
+  useEffect(() => {
+    const el = calRef.current
+    if (!el) return
+    let startX = 0
+    let startY = 0
+    const onStart = (e) => {
+      const t = e.touches[0]
+      startX = t.clientX
+      startY = t.clientY
     }
-  }
+    const onEnd = (e) => {
+      const t = e.changedTouches[0]
+      const dx = t.clientX - startX
+      const dy = t.clientY - startY
+      // 가로 이동 50px 이상 + 가로가 세로보다 우세할 때만 월 전환
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) nextMonth()
+        else prevMonth()
+      }
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchend', onEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchend', onEnd)
+    }
+  }, [prevMonth, nextMonth])
 
   // 상세보기 → 수정 모달
   const openEdit = useCallback((p) => {
@@ -326,11 +339,7 @@ function Calendar({ onLogout }) {
       {error && <div className="banner-error">{error}</div>}
       {loading && <div className="banner">불러오는 중…</div>}
 
-      <div
-        className="calendar"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
+      <div className="calendar" ref={calRef}>
         <div className="weekday-row">
           {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
             <div
@@ -348,7 +357,6 @@ function Calendar({ onLogout }) {
             week={week}
             eventsByDate={eventsByDate}
             month={cursor}
-            onClickProject={openDetail}
             onClickDay={(day) => setDaySheet(day)}
           />
         ))}
@@ -552,7 +560,7 @@ function buildWeeks(cursor) {
 // ---------------- 주 단위 행 (날짜 셀마다 공사 블록 표시) ----------------
 const MAX_VISIBLE = 4
 
-function WeekRow({ week, eventsByDate, month, onClickProject, onClickDay }) {
+function WeekRow({ week, eventsByDate, month, onClickDay }) {
   const today = dayjs()
 
   return (
@@ -590,7 +598,7 @@ function WeekRow({ week, eventsByDate, month, onClickProject, onClickDay }) {
                   title={`${p.name}${p.site_name ? ' · ' + p.site_name : ''} (${p.start_date} ~ ${p.end_date})`}
                   onClick={(e) => {
                     e.stopPropagation()
-                    onClickProject(p)
+                    onClickDay(day)
                   }}
                 >
                   {chipText(p)}

@@ -12,7 +12,9 @@
       "Bash(git commit -q -m '날짜 입력을 클릭형 달력 팝업\\(DatePicker\\)으로 교체 *)",
       "Bash(npm run *)",
       "Bash(netlify deploy *)",
-      "Bash(git commit -q -m ' *)"
+      "Bash(git commit -q -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit *)"
     ]
   }
 }
