@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 
@@ -142,12 +142,41 @@ function Calendar({ onLogout }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modal, setModal] = useState(null) // form object or null
+  const [detail, setDetail] = useState(null) // 상세보기로 보여줄 프로젝트 또는 null
   const [daySheet, setDaySheet] = useState(null) // 바텀시트로 보여줄 날짜(dayjs) 또는 null
   const [tab, setTab] = useState(CATEGORIES[0]) // 활성 카테고리 탭
 
-  // 프로젝트 → 수정 모달 폼 (바텀시트 / 블록 클릭 공용)
-  const openEdit = useCallback((p) => {
+  // 프로젝트 → 상세보기 (바텀시트 / 블록 클릭 공용)
+  const openDetail = useCallback((p) => {
     setDaySheet(null)
+    setDetail(p)
+  }, [])
+
+  const prevMonth = useCallback(() => setCursor((c) => c.subtract(1, 'month')), [])
+  const nextMonth = useCallback(() => setCursor((c) => c.add(1, 'month')), [])
+
+  // 좌우 스와이프로 이전/다음 달 이동 (모바일)
+  const touch = useRef(null)
+  const onTouchStart = (e) => {
+    const t = e.touches[0]
+    touch.current = { x: t.clientX, y: t.clientY }
+  }
+  const onTouchEnd = (e) => {
+    if (!touch.current) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - touch.current.x
+    const dy = t.clientY - touch.current.y
+    touch.current = null
+    // 가로 이동이 충분히 크고 세로보다 우세할 때만 월 전환
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) nextMonth()
+      else prevMonth()
+    }
+  }
+
+  // 상세보기 → 수정 모달
+  const openEdit = useCallback((p) => {
+    setDetail(null)
     setModal({
       id: p.id,
       name: p.name ?? '',
@@ -228,6 +257,7 @@ function Calendar({ onLogout }) {
       })
       if (!res.ok) throw new Error(await res.text())
       setModal(null)
+      setDetail(null)
       await load()
     } catch (e) {
       alert('삭제 실패: ' + e.message)
@@ -265,13 +295,13 @@ function Calendar({ onLogout }) {
           <span className="caret">⌄</span>
         </h1>
         <div className="topbar-icons">
-          <button className="icon-btn" onClick={() => setCursor(cursor.subtract(1, 'month'))} aria-label="이전 달">
+          <button className="icon-btn" onClick={prevMonth} aria-label="이전 달">
             ‹
           </button>
           <button className="icon-btn today-dot" onClick={() => setCursor(dayjs().startOf('month'))} aria-label="오늘">
             오늘
           </button>
-          <button className="icon-btn" onClick={() => setCursor(cursor.add(1, 'month'))} aria-label="다음 달">
+          <button className="icon-btn" onClick={nextMonth} aria-label="다음 달">
             ›
           </button>
           <button className="icon-btn" onClick={onLogout} aria-label="로그아웃">
@@ -296,7 +326,11 @@ function Calendar({ onLogout }) {
       {error && <div className="banner-error">{error}</div>}
       {loading && <div className="banner">불러오는 중…</div>}
 
-      <div className="calendar">
+      <div
+        className="calendar"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         <div className="weekday-row">
           {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
             <div
@@ -314,7 +348,7 @@ function Calendar({ onLogout }) {
             week={week}
             eventsByDate={eventsByDate}
             month={cursor}
-            onClickProject={openEdit}
+            onClickProject={openDetail}
             onClickDay={(day) => setDaySheet(day)}
           />
         ))}
@@ -332,7 +366,7 @@ function Calendar({ onLogout }) {
         <DayListSheet
           day={daySheet}
           projects={eventsByDate[daySheet.format(DATE_FMT)] || []}
-          onClickProject={openEdit}
+          onClickProject={openDetail}
           onAddNew={() => {
             setDaySheet(null)
             setModal({
@@ -342,6 +376,15 @@ function Calendar({ onLogout }) {
             })
           }}
           onClose={() => setDaySheet(null)}
+        />
+      )}
+
+      {detail && (
+        <DetailView
+          project={detail}
+          onEdit={() => openEdit(detail)}
+          onDelete={() => remove(detail.id)}
+          onClose={() => setDetail(null)}
         />
       )}
 
@@ -355,6 +398,89 @@ function Calendar({ onLogout }) {
           onDelete={remove}
         />
       )}
+    </div>
+  )
+}
+
+// ---------------- 일정 상세보기 ----------------
+function DetailView({ project: p, onEdit, onDelete, onClose }) {
+  const dateText =
+    p.start_date === p.end_date
+      ? dayjs(p.start_date).format('YYYY년 M월 D일 (ddd)')
+      : `${dayjs(p.start_date).format('YYYY. M. D (ddd)')} ~ ${dayjs(
+          p.end_date
+        ).format('YYYY. M. D (ddd)')}`
+  const timeText = p.all_day
+    ? '종일'
+    : `${(p.start_time || '').slice(0, 5)}${
+        p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
+      }`
+
+  return (
+    <div className="sheet">
+      <div className="sheet-form">
+        <div className="sheet-bar">
+          <button type="button" className="sheet-x" onClick={onClose} aria-label="닫기">
+            ✕
+          </button>
+          <button type="button" className="sheet-save" onClick={onEdit}>
+            수정
+          </button>
+        </div>
+
+        <div className="sheet-body">
+          <div className="dv-title-row">
+            <span
+              className="dv-color"
+              style={{ backgroundColor: blockColor(p) }}
+            />
+            <h2 className="dv-title">{p.name}</h2>
+          </div>
+
+          <div className="list-group">
+            <div className="list-row">
+              <span className="row-ic"><CalIcon /></span>
+              <span className="row-value">{categoryOf(p)}</span>
+              <span className="cat-badge">{catBadge(categoryOf(p))}</span>
+            </div>
+            <div className="list-row">
+              <span className="row-ic"><ClockIcon /></span>
+              <span className="dv-stack">
+                <span className="dv-line">{dateText}</span>
+                <span className="dv-sub">{timeText}</span>
+              </span>
+            </div>
+          </div>
+
+          {p.site_name && (
+            <div className="list-group">
+              <div className="list-row">
+                <span className="row-ic"><SiteIcon /></span>
+                <span className="row-value">{p.site_name}</span>
+              </div>
+            </div>
+          )}
+
+          {p.memo && (
+            <div className="list-group">
+              <div className="list-row list-row-textarea">
+                <span className="row-ic"><MemoIcon /></span>
+                <p className="dv-memo">{p.memo}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="list-group">
+            <button
+              type="button"
+              className="list-row row-delete"
+              onClick={onDelete}
+            >
+              일정 삭제
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
