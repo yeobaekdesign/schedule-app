@@ -33,8 +33,6 @@ const COLORS = [
   '#8e8e93', // gray
 ]
 
-const APP_PASSWORD = '030265'
-const AUTH_KEY = 'yebaek_auth'
 const DATE_FMT = 'YYYY-MM-DD'
 
 const CATEGORIES = ['여백디자인', '개인']
@@ -119,57 +117,11 @@ function buildEventsByDate(projects, gridStart, gridEnd) {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(
-    () => sessionStorage.getItem(AUTH_KEY) === 'ok'
-  )
-
-  if (!authed) return <Login onSuccess={() => setAuthed(true)} />
-  return <Calendar onLogout={() => setAuthed(false)} />
-}
-
-// ---------------- 로그인 화면 ----------------
-function Login({ onSuccess }) {
-  const [pw, setPw] = useState('')
-  const [error, setError] = useState('')
-
-  const submit = (e) => {
-    e.preventDefault()
-    if (pw === APP_PASSWORD) {
-      sessionStorage.setItem(AUTH_KEY, 'ok')
-      onSuccess()
-    } else {
-      setError('비밀번호가 올바르지 않습니다.')
-      setPw('')
-    }
-  }
-
-  return (
-    <div className="login-wrap">
-      <form className="login-card" onSubmit={submit}>
-        <div className="login-logo">여백디자인</div>
-        <h1 className="login-title">공정 관리 캘린더</h1>
-        <input
-          type="password"
-          className="login-input"
-          placeholder="비밀번호"
-          value={pw}
-          onChange={(e) => {
-            setPw(e.target.value)
-            setError('')
-          }}
-          autoFocus
-        />
-        {error && <div className="login-error">{error}</div>}
-        <button type="submit" className="btn btn-primary login-btn">
-          로그인
-        </button>
-      </form>
-    </div>
-  )
+  return <Calendar />
 }
 
 // ---------------- 캘린더 화면 ----------------
-function Calendar({ onLogout }) {
+function Calendar() {
   const [cursor, setCursor] = useState(() => dayjs().startOf('month'))
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -363,9 +315,6 @@ function Calendar({ onLogout }) {
           </button>
           <button className="icon-btn" onClick={nextMonth} aria-label="다음 달">
             ›
-          </button>
-          <button className="icon-btn" onClick={onLogout} aria-label="로그아웃">
-            ⎋
           </button>
         </div>
       </header>
