@@ -581,9 +581,10 @@ function Calendar() {
       if (!res.ok) throw new Error(await res.text())
 
       // 2) 같은 site_name을 가진 모든 일정 일괄 PATCH
-      //    값에 공백/특수문자가 있어도 정확히 매칭되도록 큰따옴표로 감싸고 인코딩
+      //    PostgREST eq 값은 큰따옴표로 감싸면 따옴표까지 리터럴로 매칭되어 0건이 됨.
+      //    공백/한글은 encodeURIComponent로 인코딩만 하면 정확히 매칭된다.
       if (oldName) {
-        const filter = `site_name=eq.${encodeURIComponent(`"${oldName}"`)}`
+        const filter = `site_name=eq.${encodeURIComponent(oldName)}`
         const pRes = await fetch(`${REST}?${filter}`, {
           method: 'PATCH',
           headers: { ...headers, Prefer: 'return=representation' },
