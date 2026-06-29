@@ -923,22 +923,20 @@ function Calendar() {
   )
   // 현장 필터 토글 (다중 선택; 비어 있으면 전체 표시)
   const toggleSite = (name) => {
-    const turningOn = !selectedSites.has(name)
     setSelectedSites((prev) => {
       const next = new Set(prev)
       if (next.has(name)) next.delete(name)
       else next.add(name)
       return next
     })
-    // 라벨을 켤 때, 해당 현장의 가장 이른 일정이 있는 달로 이동
-    if (turningOn) {
-      const ps = projects.filter((p) => (p.site_name || '').trim() === name)
-      if (ps.length) {
-        const earliest = ps.reduce((a, b) =>
-          a.start_date <= b.start_date ? a : b
-        )
-        setCursor(dayjs(earliest.start_date).startOf('month'))
-      }
+    // 라벨을 누를 때마다 해당 현장의 가장 이른 일정이 있는 달로 이동
+    // (선택/해제 방향과 무관 — 모바일에서도 항상 동작)
+    const ps = projects.filter((p) => (p.site_name || '').trim() === name)
+    if (ps.length) {
+      const earliest = ps.reduce((a, b) =>
+        a.start_date <= b.start_date ? a : b
+      )
+      setCursor(dayjs(earliest.start_date).startOf('month'))
     }
   }
   // 삭제된 현장이 필터에 남지 않도록 정리
