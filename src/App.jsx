@@ -535,8 +535,8 @@ function Calendar() {
     }
   }
 
-  // 현장 라벨 색상 변경
   // 현장 라벨 수정 (이름/색상) — patch = { name?, color? }
+  // sites 테이블 수정 + 같은 site_name을 가진 모든 일정(project)을 일괄 업데이트
   const updateSite = async (site, patch) => {
     if (!siteTableOk) {
       alert('Supabase에 sites 테이블이 없어 수정할 수 없습니다.')
@@ -554,24 +554,22 @@ function Calendar() {
         return
       }
     }
-    // 이 라벨이 적용된 일정(project)에 반영할 변경분
-    const projectPatch = {}
-    if (next.name != null && next.name !== site.name)
-      projectPatch.site_name = next.name
-    if (next.color != null && next.color !== site.color)
-      projectPatch.site_color = next.color
-    const affectsProjects = Object.keys(projectPatch).length > 0
+
+    const oldName = site.name // 일정 필터에 쓸 "수정 전" 이름
+    const resolvedName = next.name != null ? next.name : site.name
+    const resolvedColor = next.color != null ? next.color : site.color
+    // 일정에는 이름/색상 모두 최종값으로 반영 (변경 감지에 의존하지 않음)
+    const projectPatch = { site_name: resolvedName, site_color: resolvedColor }
 
     // 낙관적 반영 (sites + 같은 site_name을 가진 일정)
     setSites((prev) =>
       prev.map((s) => (s.id === site.id ? { ...s, ...next } : s))
     )
-    if (affectsProjects)
-      setProjects((prev) =>
-        prev.map((p) =>
-          p.site_name === site.name ? { ...p, ...projectPatch } : p
-        )
+    setProjects((prev) =>
+      prev.map((p) =>
+        (p.site_name || '').trim() === oldName ? { ...p, ...projectPatch } : p
       )
+    )
 
     try {
       // 1) sites 테이블 라벨 수정
@@ -582,21 +580,27 @@ function Calendar() {
       })
       if (!res.ok) throw new Error(await res.text())
 
-      // 2) 같은 site_name을 가진 모든 일정 일괄 업데이트
-      if (affectsProjects) {
-        const pRes = await fetch(
-          `${REST}?site_name=eq.${encodeURIComponent(site.name)}`,
-          {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify(projectPatch),
-          }
-        )
+      // 2) 같은 site_name을 가진 모든 일정 일괄 PATCH
+      //    값에 공백/특수문자가 있어도 정확히 매칭되도록 큰따옴표로 감싸고 인코딩
+      if (oldName) {
+        const filter = `site_name=eq.${encodeURIComponent(`"${oldName}"`)}`
+        const pRes = await fetch(`${REST}?${filter}`, {
+          method: 'PATCH',
+          headers: { ...headers, Prefer: 'return=representation' },
+          body: JSON.stringify(projectPatch),
+        })
         if (!pRes.ok) throw new Error(await pRes.text())
+        // 실제 반영된 행 확인 (필터/권한 문제 조기 발견)
+        const updated = await pRes.json()
+        console.log(
+          `[updateSite] '${oldName}' → 일정 ${updated.length}건 업데이트`
+        )
       }
+
+      // 서버 기준으로 재동기화 (DB 실제 반영 결과를 화면에 반영)
+      await load()
     } catch (e) {
       alert('현장 수정 실패: ' + e.message)
-      // 실패 시 서버 기준으로 재동기화
       await reloadSites()
       await load()
     }
@@ -2030,29 +2034,32 @@ function SiteManager({ sites, siteTableOk, onAdd, onRemove, onUpdate, onClose })
           )}
         </div>
 
-        <form className="cal-add" onSubmit={submit}>
-          <input
-            className="row-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="새 현장 이름"
-          />
-          <div className="color-picker">
-            {COLORS.map((c) => (
-              <button
-                type="button"
-                key={c}
-                className={`color-swatch ${color === c ? 'selected' : ''}`}
-                style={{ backgroundColor: c, color: c }}
-                onClick={() => setColor(c)}
-                aria-label={c}
-              />
-            ))}
-          </div>
-          <button type="submit" className="bs-add cal-add-btn">
-            + 현장 추가
-          </button>
-        </form>
+        {/* 수정 모드일 때는 새 현장 추가 섹션 숨김 */}
+        {editId === null && (
+          <form className="cal-add" onSubmit={submit}>
+            <input
+              className="row-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="새 현장 이름"
+            />
+            <div className="color-picker">
+              {COLORS.map((c) => (
+                <button
+                  type="button"
+                  key={c}
+                  className={`color-swatch ${color === c ? 'selected' : ''}`}
+                  style={{ backgroundColor: c, color: c }}
+                  onClick={() => setColor(c)}
+                  aria-label={c}
+                />
+              ))}
+            </div>
+            <button type="submit" className="bs-add cal-add-btn">
+              + 현장 추가
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )
