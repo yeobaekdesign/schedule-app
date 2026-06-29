@@ -554,20 +554,51 @@ function Calendar() {
         return
       }
     }
-    // 낙관적 반영
+    // 이 라벨이 적용된 일정(project)에 반영할 변경분
+    const projectPatch = {}
+    if (next.name != null && next.name !== site.name)
+      projectPatch.site_name = next.name
+    if (next.color != null && next.color !== site.color)
+      projectPatch.site_color = next.color
+    const affectsProjects = Object.keys(projectPatch).length > 0
+
+    // 낙관적 반영 (sites + 같은 site_name을 가진 일정)
     setSites((prev) =>
       prev.map((s) => (s.id === site.id ? { ...s, ...next } : s))
     )
+    if (affectsProjects)
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.site_name === site.name ? { ...p, ...projectPatch } : p
+        )
+      )
+
     try {
+      // 1) sites 테이블 라벨 수정
       const res = await fetch(`${SITE_REST}?id=eq.${site.id}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify(next),
       })
       if (!res.ok) throw new Error(await res.text())
+
+      // 2) 같은 site_name을 가진 모든 일정 일괄 업데이트
+      if (affectsProjects) {
+        const pRes = await fetch(
+          `${REST}?site_name=eq.${encodeURIComponent(site.name)}`,
+          {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(projectPatch),
+          }
+        )
+        if (!pRes.ok) throw new Error(await pRes.text())
+      }
     } catch (e) {
       alert('현장 수정 실패: ' + e.message)
+      // 실패 시 서버 기준으로 재동기화
       await reloadSites()
+      await load()
     }
   }
 
