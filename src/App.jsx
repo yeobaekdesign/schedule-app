@@ -812,32 +812,36 @@ function Calendar() {
     }
   }
 
-  // 일정 순서(드래그) 변경 → sort_order 저장 (컬럼 없으면 로컬 상태로만 유지)
-  const reorder = async (ordered) => {
-    if (!ordered || ordered.length < 2) return
-    const idRank = new Map(
-      [...projects].sort(byOrder).map((p, i) => [p.id, i])
+  // 일정 순서(드래그) 변경 → 전체 sort_order를 0..N-1로 재정규화 후 저장
+  // 캘린더 막대 / 바텀시트 모두 byOrder(sort_order) 정렬을 따르므로
+  // 전체 projects 상태를 갱신하면 캘린더 순서도 즉시 반영된다.
+  const reorder = async (orderedDayItems) => {
+    if (!orderedDayItems || orderedDayItems.length < 2) return
+    const daySet = new Set(orderedDayItems.map((p) => String(p.id)))
+    // 현재 전체 표시 순서에서, 이 날짜 항목들 자리에 새 순서를 끼워넣는다
+    let di = 0
+    const newOrder = [...projects]
+      .sort(byOrder)
+      .map((p) => (daySet.has(String(p.id)) ? orderedDayItems[di++] : p))
+    // 0..N-1 연속 sort_order 부여
+    const rank = new Map(newOrder.map((p, i) => [String(p.id), i]))
+    // 실제로 값이 바뀐 항목만 서버에 저장
+    const changed = projects.filter(
+      (p) => p.sort_order !== rank.get(String(p.id))
     )
-    // 이 날짜 항목들이 가진 정렬 키를 모아 새 순서대로 재배치
-    const keys = ordered
-      .map((p) => (typeof p.sort_order === 'number' ? p.sort_order : idRank.get(p.id)))
-      .sort((a, b) => a - b)
-    const updates = ordered.map((p, i) => ({ id: p.id, sort_order: keys[i] }))
-    // 낙관적 업데이트
+    if (changed.length === 0) return
+    // 낙관적 전체 상태 업데이트 (캘린더 즉시 반영)
     setProjects((prev) =>
-      prev.map((p) => {
-        const u = updates.find((x) => x.id === p.id)
-        return u ? { ...p, sort_order: u.sort_order } : p
-      })
+      prev.map((p) => ({ ...p, sort_order: rank.get(String(p.id)) }))
     )
     // 서버 저장 (sort_order 컬럼이 없으면 실패 → 로컬 상태 유지)
     try {
       const results = await Promise.all(
-        updates.map((u) =>
-          fetch(`${REST}?id=eq.${u.id}`, {
+        changed.map((p) =>
+          fetch(`${REST}?id=eq.${p.id}`, {
             method: 'PATCH',
             headers,
-            body: JSON.stringify({ sort_order: u.sort_order }),
+            body: JSON.stringify({ sort_order: rank.get(String(p.id)) }),
           })
         )
       )
@@ -1305,9 +1309,15 @@ function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onCl
   useEffect(() => setItems(projects), [projects])
   const [dragId, setDragId] = useState(null)
 
+  // 핸들러 클로저가 항상 최신 순서를 보도록 ref로 추적
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+  const dragIdRef = useRef(null) // 드래그 중인 항목 id
+  const movedRef = useRef(false) // 실제로 순서가 바뀌었는지
+
   // 공통: id 기준으로 한 항목을 다른 항목 위치로 이동
   const moveItem = (fromId, toId) => {
-    if (fromId == null || toId == null || fromId === toId) return
+    if (fromId == null || toId == null || String(fromId) === String(toId)) return
     setItems((prev) => {
       const from = prev.findIndex((x) => String(x.id) === String(fromId))
       const to = prev.findIndex((x) => String(x.id) === String(toId))
@@ -1315,44 +1325,39 @@ function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onCl
       const next = [...prev]
       const [m] = next.splice(from, 1)
       next.splice(to, 0, m)
+      movedRef.current = true
       return next
     })
   }
 
-  // ---- 데스크톱: HTML5 draggable ----
-  const onDragStart = (e, id) => {
+  // ---- 마우스 / 터치 / 펜 공용 (Pointer Events) ----
+  // 그립(⠿)에서 드래그 시작 → 포인터 캡처로 이동/종료 이벤트를 한 곳에서 처리
+  const onPointerDown = (e, id) => {
+    e.preventDefault() // 텍스트 선택 / 네이티브 드래그 방지
+    dragIdRef.current = id
+    movedRef.current = false
     setDragId(id)
-    e.dataTransfer.effectAllowed = 'move'
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      /* 캡처 미지원 환경 무시 */
+    }
   }
-  const onDragOver = (e, overId) => {
-    e.preventDefault()
-    moveItem(dragId, overId)
-  }
-  const onDrop = (e) => {
-    e.preventDefault()
-    setDragId(null)
-    onReorder(items)
-  }
-  const onDragEnd = () => setDragId(null)
-
-  // ---- 모바일: 터치 이벤트 ----
-  const touchId = useRef(null)
-  const onTouchStart = (id) => {
-    touchId.current = id
-    setDragId(id)
-  }
-  const onTouchMove = (e) => {
-    if (touchId.current == null) return
-    const t = e.touches[0]
-    const el = document.elementFromPoint(t.clientX, t.clientY)
+  const onPointerMove = (e) => {
+    if (dragIdRef.current == null) return
+    // 포인터 위치 아래의 행을 찾아 그 위치로 이동
+    const el = document.elementFromPoint(e.clientX, e.clientY)
     const row = el && el.closest('[data-row]')
-    if (row) moveItem(touchId.current, row.getAttribute('data-id'))
+    if (row) moveItem(dragIdRef.current, row.getAttribute('data-id'))
   }
-  const onTouchEnd = () => {
-    if (touchId.current == null) return
-    touchId.current = null
+  const endDrag = () => {
+    if (dragIdRef.current == null) return
+    dragIdRef.current = null
     setDragId(null)
-    onReorder(items)
+    if (movedRef.current) {
+      movedRef.current = false
+      onReorder(itemsRef.current) // 최신 순서를 서버에 저장
+    }
   }
 
   return (
@@ -1375,18 +1380,13 @@ function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onCl
                 data-row
                 data-id={p.id}
                 className={`bs-item ${dragId === p.id ? 'bs-dragging' : ''}`}
-                draggable
-                onDragStart={(e) => onDragStart(e, p.id)}
-                onDragOver={(e) => onDragOver(e, p.id)}
-                onDrop={onDrop}
-                onDragEnd={onDragEnd}
               >
                 <span
                   className="bs-grip"
-                  onTouchStart={() => onTouchStart(p.id)}
-                  onTouchMove={onTouchMove}
-                  onTouchEnd={onTouchEnd}
-                  onTouchCancel={onTouchEnd}
+                  onPointerDown={(e) => onPointerDown(e, p.id)}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
                   aria-label="순서 변경 핸들"
                 >
                   ⠿
