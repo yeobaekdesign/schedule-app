@@ -109,11 +109,11 @@ body {
   border: none;
   background: transparent;
   color: var(--text);
-  font-size: 38px;
+  font-size: 18px;
   line-height: 1;
   opacity: 0.22;
   cursor: pointer;
-  padding: 16px 6px;
+  padding: 10px 4px;
   transition: opacity 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1316,9 +1316,9 @@ body {
     font-size: 17px;
   }
   .edge-arrow {
-    font-size: 32px;
+    font-size: 15px;
     opacity: 0.25;
-    padding: 14px 4px;
+    padding: 8px 3px;
   }
   .icon-btn {
     height: 30px;
