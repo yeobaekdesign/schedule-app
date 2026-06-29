@@ -1398,28 +1398,20 @@ body {
   .tab {
     padding: 4px 12px;
   }
-  /* 모바일: 범례를 한 줄 가로 스크롤로 — 세로 부피 최소화 */
+  /* 모바일: 범례 칩을 작게 — 줄바꿈은 유지하되 부피 최소화 */
   .legend {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 6px;
+    gap: 4px 6px;
     margin-bottom: 6px;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .legend::-webkit-scrollbar {
-    display: none;
   }
   .legend-item {
-    flex: none;
-    font-size: 11px;
-    padding: 4px 10px;
-    gap: 5px;
+    font-size: 10px;
+    padding: 2px 7px;
+    gap: 4px;
+    border-radius: 11px;
   }
   .legend-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
   }
   .weekday {
     padding: 4px 0;
