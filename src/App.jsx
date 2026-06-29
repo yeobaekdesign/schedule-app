@@ -1314,6 +1314,10 @@ function ExportDialog({ sites, projects, defaultMonth, defaultSites, onConfirm, 
   const [to, setTo] = useState(defaultMonth.format('YYYY-MM'))
   const [blank, setBlank] = useState(false) // 일정 없이 빈 달력
 
+  const shiftMonth = (ym, delta) =>
+    dayjs(ym + '-01').add(delta, 'month').format('YYYY-MM')
+  const fmtMonth = (ym) => dayjs(ym + '-01').format('YYYY년 M월')
+
   // 선택된 현장들의 일정이 걸친 전체 기간으로 자동 설정
   const autoRange = (nameSet) => {
     if (!nameSet.size) return
@@ -1400,25 +1404,44 @@ function ExportDialog({ sites, projects, defaultMonth, defaultSites, onConfirm, 
             </p>
           </div>
 
-          <div className="export-range-row">
-            <div className="export-field">
-              <label className="export-label">시작 월</label>
-              <input
-                type="month"
-                className="export-select"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-              />
+          <div className="export-field">
+            <label className="export-label">시작 월</label>
+            <div className="month-stepper">
+              <button
+                type="button"
+                onClick={() => setFrom(shiftMonth(from, -1))}
+                aria-label="이전 달"
+              >
+                ‹
+              </button>
+              <span className="month-stepper-val">{fmtMonth(from)}</span>
+              <button
+                type="button"
+                onClick={() => setFrom(shiftMonth(from, 1))}
+                aria-label="다음 달"
+              >
+                ›
+              </button>
             </div>
-            <span className="export-tilde">~</span>
-            <div className="export-field">
-              <label className="export-label">종료 월</label>
-              <input
-                type="month"
-                className="export-select"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-              />
+          </div>
+          <div className="export-field">
+            <label className="export-label">종료 월</label>
+            <div className="month-stepper">
+              <button
+                type="button"
+                onClick={() => setTo(shiftMonth(to, -1))}
+                aria-label="이전 달"
+              >
+                ‹
+              </button>
+              <span className="month-stepper-val">{fmtMonth(to)}</span>
+              <button
+                type="button"
+                onClick={() => setTo(shiftMonth(to, 1))}
+                aria-label="다음 달"
+              >
+                ›
+              </button>
             </div>
           </div>
 

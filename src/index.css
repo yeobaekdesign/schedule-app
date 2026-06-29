@@ -1561,10 +1561,42 @@ body {
   flex-direction: column;
   gap: 16px;
   padding: 4px 2px 8px;
-  /* 시트 안에서 스크롤되어 '저장' 버튼까지 도달 가능하게 */
+  /* 시트 안에서 세로로만 스크롤 (가로 이동 방지) */
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+/* 월 선택 스테퍼 (‹ 2026년 7월 ›) */
+.month-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 5px 6px;
+}
+.month-stepper button {
+  flex: none;
+  width: 44px;
+  height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: #f0f1f4;
+  color: var(--primary);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.month-stepper button:active {
+  background: #e3e9f7;
+}
+.month-stepper-val {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
 }
 .export-field {
   display: flex;
