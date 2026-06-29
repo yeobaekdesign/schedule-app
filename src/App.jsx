@@ -607,6 +607,37 @@ function Calendar() {
     }
   }
 
+  // 현장 라벨 순서 변경 → sort_order 0..N-1 재부여 후 저장
+  // (상단 범례가 sites 순서를 따르므로 즉시 반영됨)
+  const reorderSites = async (orderedSites) => {
+    if (!orderedSites || orderedSites.length < 2) return
+    if (!siteTableOk) {
+      alert('Supabase에 sites 테이블이 없어 순서를 저장할 수 없습니다.')
+      return
+    }
+    // 낙관적 반영
+    setSites(orderedSites.map((s, i) => ({ ...s, sort_order: i })))
+    // 값이 바뀐 항목만 저장
+    const changed = orderedSites.filter((s, i) => s.sort_order !== i)
+    try {
+      const results = await Promise.all(
+        changed.map((s) =>
+          fetch(`${SITE_REST}?id=eq.${s.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({
+              sort_order: orderedSites.findIndex((x) => x.id === s.id),
+            }),
+          })
+        )
+      )
+      if (results.some((r) => !r.ok)) throw new Error('순서 저장 실패')
+    } catch (e) {
+      alert('현장 순서 저장 실패: ' + e.message)
+      await reloadSites()
+    }
+  }
+
   useEffect(() => {
     init()
   }, [init])
@@ -876,15 +907,12 @@ function Calendar() {
     const gridEnd = weeks[weeks.length - 1][6]
     return buildEventsByDate(visibleProjects, gridStart, gridEnd)
   }, [visibleProjects, weeks])
-  // 범례: 현재 보이는 일정의 현장명 + 현장색상 (현장명 있는 것만, 중복 제거)
-  const legend = useMemo(() => {
-    const m = new Map()
-    for (const p of visibleProjects) {
-      const name = (p.site_name || '').trim()
-      if (name && !m.has(name)) m.set(name, blockColor(p))
-    }
-    return [...m.entries()].map(([name, color]) => ({ name, color }))
-  }, [visibleProjects])
+  // 범례: 관리 중인 현장 라벨(sites)을 순서 그대로 표시
+  // → 라벨 추가/삭제/순서변경/색상변경이 캘린더 상단에 즉시 반영됨
+  const legend = useMemo(
+    () => sites.map((s) => ({ name: s.name, color: s.color || DEFAULT_COLOR })),
+    [sites]
+  )
 
   return (
     <div className="app">
@@ -1052,6 +1080,7 @@ function Calendar() {
           onAddSite={addSite}
           onRemoveSite={removeSite}
           onUpdateSite={updateSite}
+          onReorderSite={reorderSites}
           onChange={setModal}
           onClose={() => setModal(null)}
           onSave={save}
@@ -1711,6 +1740,7 @@ function ProjectModal({
   onAddSite,
   onRemoveSite,
   onUpdateSite,
+  onReorderSite,
   onChange,
   onClose,
   onSave,
@@ -1930,6 +1960,7 @@ function ProjectModal({
           onAdd={onAddSite}
           onRemove={onRemoveSite}
           onUpdate={onUpdateSite}
+          onReorder={onReorderSite}
           onClose={() => setSiteManager(false)}
         />
       )}
@@ -2040,7 +2071,15 @@ function SitePicker({ sites, value, onSelect, onManage, onClose }) {
 }
 
 // ---------------- 현장 라벨 관리 바텀시트 (추가/삭제/색상변경) ----------------
-function SiteManager({ sites, siteTableOk, onAdd, onRemove, onUpdate, onClose }) {
+function SiteManager({
+  sites,
+  siteTableOk,
+  onAdd,
+  onRemove,
+  onUpdate,
+  onReorder,
+  onClose,
+}) {
   const [name, setName] = useState('')
   const [color, setColor] = useState(COLORS[0])
   const [editId, setEditId] = useState(null) // 수정 중인 현장 id
@@ -2052,6 +2091,15 @@ function SiteManager({ sites, siteTableOk, onAdd, onRemove, onUpdate, onClose })
     if (!name.trim()) return
     onAdd({ name, color })
     setName('')
+  }
+
+  // idx 현장을 위/아래로 한 칸 이동 (순서는 상단 범례에도 반영)
+  const move = (idx, dir) => {
+    const j = dir === 'up' ? idx - 1 : idx + 1
+    if (j < 0 || j >= sites.length) return
+    const next = [...sites]
+    ;[next[idx], next[j]] = [next[j], next[idx]]
+    onReorder(next)
   }
 
   const startEdit = (s) => {
@@ -2090,7 +2138,7 @@ function SiteManager({ sites, siteTableOk, onAdd, onRemove, onUpdate, onClose })
           {sites.length === 0 ? (
             <div className="bs-empty">등록된 현장이 없습니다.</div>
           ) : (
-            sites.map((s) => (
+            sites.map((s, idx) => (
               <div key={s.id ?? s.name} className="site-manage-item">
                 {editId === s.id ? (
                   <div className="site-edit">
@@ -2134,6 +2182,26 @@ function SiteManager({ sites, siteTableOk, onAdd, onRemove, onUpdate, onClose })
                   </div>
                 ) : (
                   <div className="site-manage-row">
+                    <span className="site-arrows">
+                      <button
+                        type="button"
+                        className="site-arrow"
+                        onClick={() => move(idx, 'up')}
+                        disabled={idx === 0}
+                        aria-label="위로"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="site-arrow"
+                        onClick={() => move(idx, 'down')}
+                        disabled={idx === sites.length - 1}
+                        aria-label="아래로"
+                      >
+                        ↓
+                      </button>
+                    </span>
                     <span
                       className="site-color-btn"
                       style={{ backgroundColor: s.color || DEFAULT_COLOR }}
