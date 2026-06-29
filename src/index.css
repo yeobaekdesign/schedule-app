@@ -1393,7 +1393,7 @@ body {
 /* ---------- 반응형 ---------- */
 @media (max-width: 640px) {
   .app {
-    padding: 6px 8px 72px;
+    padding: 6px 8px 108px;
   }
   /* 상단 영역(헤더/탭/범례) — 모바일은 살짝만 띄워 한 화면 유지 */
   .topbar {
