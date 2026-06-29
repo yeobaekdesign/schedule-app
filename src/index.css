@@ -72,7 +72,7 @@ body {
 
 /* ---------- 상단바 ---------- */
 .app {
-  max-width: 760px;
+  max-width: 980px;
   margin: 0 auto;
   padding: 14px 12px 80px;
 }
@@ -551,7 +551,7 @@ body {
 }
 .day-cell {
   position: relative;
-  height: 92px; /* 고정 높이 — 일정이 많아도 셀이 늘어나지 않음 */
+  height: 112px; /* 고정 높이 — 일정이 많아도 셀이 늘어나지 않음 (PC) */
   min-width: 0;
   padding: 3px 2px;
   cursor: pointer;
@@ -567,11 +567,11 @@ body {
   color: #c7c7cc;
 }
 .day-num {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text);
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -629,7 +629,7 @@ body {
   border: none;
   border-radius: 4px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 14px;
   color: #fff;
