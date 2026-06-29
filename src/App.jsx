@@ -236,6 +236,7 @@ function Calendar() {
   const [menuOpen, setMenuOpen] = useState(false) // 캘린더 관리 시트
   const [sites, setSites] = useState([]) // Supabase sites(현장 라벨) 테이블
   const [siteTableOk, setSiteTableOk] = useState(true) // sites 테이블 사용 가능 여부
+  const [selectedSites, setSelectedSites] = useState(() => new Set()) // 활성 현장 필터(비면 전체)
 
   // 프로젝트 → 상세보기 (바텀시트 / 블록 클릭 공용)
   const openDetail = useCallback((p) => {
@@ -898,8 +899,15 @@ function Calendar() {
   // 선택된 캘린더들로 필터링 + 정렬 순서 적용 (여러 캘린더 합쳐서 표시)
   const visibleProjects = useMemo(
     () =>
-      projects.filter((p) => activeNames.has(categoryOf(p))).sort(byOrder),
-    [projects, activeNames]
+      projects
+        .filter((p) => activeNames.has(categoryOf(p)))
+        .filter(
+          (p) =>
+            selectedSites.size === 0 ||
+            selectedSites.has((p.site_name || '').trim())
+        )
+        .sort(byOrder),
+    [projects, activeNames, selectedSites]
   )
   // 반복 규칙을 반영한 날짜별 일정 맵 (보이는 6주 범위)
   const eventsByDate = useMemo(() => {
@@ -913,6 +921,24 @@ function Calendar() {
     () => sites.map((s) => ({ name: s.name, color: s.color || DEFAULT_COLOR })),
     [sites]
   )
+  // 현장 필터 토글 (다중 선택; 비어 있으면 전체 표시)
+  const toggleSite = (name) => {
+    setSelectedSites((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }
+  // 삭제된 현장이 필터에 남지 않도록 정리
+  useEffect(() => {
+    setSelectedSites((prev) => {
+      if (prev.size === 0) return prev
+      const names = new Set(sites.map((s) => s.name))
+      const kept = new Set([...prev].filter((n) => names.has(n)))
+      return kept.size === prev.size ? prev : kept
+    })
+  }, [sites])
 
   return (
     <div className="app">
@@ -981,15 +1007,31 @@ function Calendar() {
       <div className="capture-area" ref={captureRef}>
         {legend.length > 0 && (
           <div className="legend">
-            {legend.map((s) => (
-              <span className="legend-item" key={s.name}>
-                <span
-                  className="legend-dot"
-                  style={{ backgroundColor: s.color }}
-                />
-                {s.name}
-              </span>
-            ))}
+            <button
+              type="button"
+              className={`legend-item ${selectedSites.size === 0 ? 'active' : ''}`}
+              onClick={() => setSelectedSites(new Set())}
+              data-html2canvas-ignore="true"
+            >
+              전체
+            </button>
+            {legend.map((s) => {
+              const on = selectedSites.has(s.name)
+              return (
+                <button
+                  type="button"
+                  className={`legend-item ${on ? 'active' : ''}`}
+                  key={s.name}
+                  onClick={() => toggleSite(s.name)}
+                >
+                  <span
+                    className="legend-dot"
+                    style={{ backgroundColor: s.color }}
+                  />
+                  {s.name}
+                </button>
+              )
+            })}
           </div>
         )}
 
