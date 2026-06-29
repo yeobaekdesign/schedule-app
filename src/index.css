@@ -1190,50 +1190,34 @@ body {
   background: #e3e9f7;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
 }
-.bs-item.bs-selected {
-  background: #e3e9f7;
-}
-.bs-grip {
+/* 왼쪽 ↑↓ 순서 변경 컨트롤 (위/아래 절반) */
+.bs-arrows {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   flex: none;
   width: 38px;
-  font-size: 18px;
-  color: #b0b0b6;
+  align-self: stretch;
+}
+.bs-arrow {
+  flex: 1;
+  border: none;
   background: transparent;
-  border: none;
-  cursor: pointer;
-  user-select: none;
-}
-.bs-grip.on {
   color: #2c6bed;
-}
-/* 선택 시 나타나는 ↑↓ 순서 변경 버튼 */
-.bs-move {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: none;
-  padding-right: 8px;
-}
-.bs-move-btn {
-  width: 34px;
-  height: 34px;
-  border: none;
-  border-radius: 9px;
-  background: #2c6bed;
-  color: #fff;
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
+  padding: 0;
+  user-select: none;
 }
-.bs-move-btn:disabled {
-  background: #c4cdde;
+.bs-arrow:first-child {
+  border-bottom: 1px solid #e2e2e6;
+}
+.bs-arrow:disabled {
+  color: #cfd3da;
   cursor: default;
 }
-.bs-move-btn:active:not(:disabled) {
-  opacity: 0.8;
+.bs-arrow:active:not(:disabled) {
+  background: #e3e9f7;
 }
 .bs-item-main {
   display: flex;

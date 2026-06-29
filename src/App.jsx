@@ -1302,42 +1302,26 @@ function DetailView({ project: p, onEdit, onDelete, onClose }) {
   )
 }
 
-// ---------------- 날짜별 일정 바텀시트 (점 버튼 선택 → ↑↓ 순서 변경) ----------------
+// ---------------- 날짜별 일정 바텀시트 (↑↓ 버튼으로 순서 변경) ----------------
 function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onClose }) {
   // 순서 변경이 즉시 반영되는 로컬 순서
   const [items, setItems] = useState(projects)
   useEffect(() => setItems(projects), [projects])
-  // 선택(활성화)된 항목 id — 선택 시 ↑↓ 버튼 표시
-  const [selectedId, setSelectedId] = useState(null)
 
-  // 점(⠿) 버튼 클릭 → 선택 토글
-  const toggleSelect = (e, id) => {
+  // idx 항목을 위/아래로 한 칸 이동
+  const move = (e, idx, dir) => {
     e.stopPropagation()
-    setSelectedId((cur) => (String(cur) === String(id) ? null : id))
-  }
-
-  // 선택된 항목을 위/아래로 한 칸 이동
-  const move = (e, dir) => {
-    e.stopPropagation()
-    const i = items.findIndex((x) => String(x.id) === String(selectedId))
-    if (i === -1) return
-    const j = dir === 'up' ? i - 1 : i + 1
+    const j = dir === 'up' ? idx - 1 : idx + 1
     if (j < 0 || j >= items.length) return
     const next = [...items]
-    ;[next[i], next[j]] = [next[j], next[i]]
+    ;[next[idx], next[j]] = [next[j], next[idx]]
     setItems(next)
     onReorder(next) // 캘린더 즉시 반영 + sort_order 저장
   }
 
   return (
     <div className="bs-backdrop" onClick={onClose}>
-      <div
-        className="bs-sheet"
-        onClick={(e) => {
-          e.stopPropagation()
-          setSelectedId(null) // 다른 곳 클릭 시 선택 해제
-        }}
-      >
+      <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="bs-handle" />
         <div className="bs-head">
           <span className="bs-date">{day.format('M월 D일 (ddd)')}</span>
@@ -1349,69 +1333,52 @@ function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onCl
           {items.length === 0 ? (
             <div className="bs-empty">등록된 일정이 없습니다.</div>
           ) : (
-            items.map((p, idx) => {
-              const active = String(selectedId) === String(p.id)
-              return (
-                <div
-                  key={p.id}
-                  className={`bs-item ${active ? 'bs-selected' : ''}`}
+            items.map((p, idx) => (
+              <div key={p.id} className="bs-item">
+                <span className="bs-arrows">
+                  <button
+                    type="button"
+                    className="bs-arrow"
+                    onClick={(e) => move(e, idx, 'up')}
+                    disabled={idx === 0}
+                    aria-label="위로"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="bs-arrow"
+                    onClick={(e) => move(e, idx, 'down')}
+                    disabled={idx === items.length - 1}
+                    aria-label="아래로"
+                  >
+                    ↓
+                  </button>
+                </span>
+                <button
+                  type="button"
+                  className="bs-item-main"
+                  onClick={() => onClickProject(p)}
                 >
-                  <button
-                    type="button"
-                    className={`bs-grip ${active ? 'on' : ''}`}
-                    onClick={(e) => toggleSelect(e, p.id)}
-                    aria-label="순서 변경 선택"
-                    aria-pressed={active}
-                  >
-                    ⠿
-                  </button>
-                  <button
-                    type="button"
-                    className="bs-item-main"
-                    onClick={() => onClickProject(p)}
-                  >
-                    <span
-                      className="bs-dot"
-                      style={{ backgroundColor: blockColor(p) }}
-                    />
-                    <span className="bs-item-body">
-                      <span className="bs-item-title">{p.name}</span>
-                      <span className="bs-item-sub">
-                        {p.site_name ? p.site_name + ' · ' : ''}
-                        {p.all_day
-                          ? '종일'
-                          : `${(p.start_time || '').slice(0, 5)}${
-                              p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
-                            }`}
-                      </span>
+                  <span
+                    className="bs-dot"
+                    style={{ backgroundColor: blockColor(p) }}
+                  />
+                  <span className="bs-item-body">
+                    <span className="bs-item-title">{p.name}</span>
+                    <span className="bs-item-sub">
+                      {p.site_name ? p.site_name + ' · ' : ''}
+                      {p.all_day
+                        ? '종일'
+                        : `${(p.start_time || '').slice(0, 5)}${
+                            p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
+                          }`}
                     </span>
-                    {!active && <span className="bs-chevron">›</span>}
-                  </button>
-                  {active && (
-                    <span className="bs-move">
-                      <button
-                        type="button"
-                        className="bs-move-btn"
-                        onClick={(e) => move(e, 'up')}
-                        disabled={idx === 0}
-                        aria-label="위로"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="bs-move-btn"
-                        onClick={(e) => move(e, 'down')}
-                        disabled={idx === items.length - 1}
-                        aria-label="아래로"
-                      >
-                        ↓
-                      </button>
-                    </span>
-                  )}
-                </div>
-              )
-            })
+                  </span>
+                  <span className="bs-chevron">›</span>
+                </button>
+              </div>
+            ))
           )}
         </div>
       </div>
