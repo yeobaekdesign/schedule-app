@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
+import html2canvas from 'html2canvas'
 
 dayjs.locale('ko')
 
@@ -10,6 +11,12 @@ const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyc2VsenlscnBjZHBxZ2x5eWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTYzMzEsImV4cCI6MjA5NzMzMjMzMX0.9pxV2rYGvF2iRZ9OXfLxwJpS83s0ssRrVq8A771_NmY'
 const TABLE = 'project'
 const REST = `${SUPABASE_URL}/rest/v1/${TABLE}`
+// 캘린더(분류) 테이블
+const CAL_TABLE = 'calendars'
+const CAL_REST = `${SUPABASE_URL}/rest/v1/${CAL_TABLE}`
+// 현장(라벨) 테이블
+const SITE_TABLE = 'sites'
+const SITE_REST = `${SUPABASE_URL}/rest/v1/${SITE_TABLE}`
 
 const headers = {
   apikey: SUPABASE_ANON_KEY,
@@ -17,7 +24,7 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
-// 공사 블록 색상 팔레트 (iOS 시스템 컬러)
+// 공사 블록 색상 팔레트 (iOS 시스템 컬러 12 + 보조 톤 12 = 24색)
 const COLORS = [
   '#ff3b30', // red
   '#ff9500', // orange
@@ -31,15 +38,27 @@ const COLORS = [
   '#ff2d55', // pink
   '#a2845e', // brown
   '#8e8e93', // gray
+  '#d70015', // deep red
+  '#c93400', // deep orange
+  '#b25000', // amber
+  '#248a3d', // deep green
+  '#0a7e8c', // deep teal
+  '#0071a4', // deep cyan
+  '#0040dd', // royal blue
+  '#3634a3', // deep indigo
+  '#8944ab', // deep purple
+  '#d30f45', // rose
+  '#7f6545', // dark brown
+  '#48484a', // dark gray
 ]
 
 const DATE_FMT = 'YYYY-MM-DD'
 
-const CATEGORIES = ['여백디자인', '개인']
 const DEFAULT_COLOR = COLORS[6]
 
-// 한국 공휴일 + 대체공휴일 (2026년, 하드코딩)
+// 한국 공휴일 + 대체공휴일 (2026~2030년, 설날·추석은 음력 기준 양력 환산 하드코딩)
 const HOLIDAYS = {
+  // 2026
   '2026-01-01': '신정',
   '2026-02-16': '설날전날',
   '2026-02-17': '설날',
@@ -62,12 +81,94 @@ const HOLIDAYS = {
   '2026-10-05': '대체공휴일',
   '2026-10-09': '한글날',
   '2026-12-25': '크리스마스',
+  // 2027
+  '2027-01-01': '신정',
+  '2027-02-05': '설날전날',
+  '2027-02-06': '설날',
+  '2027-02-07': '설날다음날',
+  '2027-02-08': '대체공휴일',
+  '2027-03-01': '삼일절',
+  '2027-05-01': '근로자의날',
+  '2027-05-05': '어린이날',
+  '2027-05-13': '부처님오신날',
+  '2027-06-06': '현충일',
+  '2027-07-17': '제헌절',
+  '2027-08-15': '광복절',
+  '2027-08-16': '대체공휴일',
+  '2027-09-14': '추석전날',
+  '2027-09-15': '추석',
+  '2027-09-16': '추석다음날',
+  '2027-10-03': '개천절',
+  '2027-10-04': '대체공휴일',
+  '2027-10-09': '한글날',
+  '2027-10-11': '대체공휴일',
+  '2027-12-25': '크리스마스',
+  '2027-12-27': '대체공휴일',
+  // 2028
+  '2028-01-01': '신정',
+  '2028-01-25': '설날전날',
+  '2028-01-26': '설날',
+  '2028-01-27': '설날다음날',
+  '2028-03-01': '삼일절',
+  '2028-05-01': '근로자의날',
+  '2028-05-02': '부처님오신날',
+  '2028-05-05': '어린이날',
+  '2028-06-06': '현충일',
+  '2028-07-17': '제헌절',
+  '2028-08-15': '광복절',
+  '2028-10-02': '추석전날',
+  '2028-10-03': '추석',
+  '2028-10-04': '추석다음날',
+  '2028-10-05': '대체공휴일',
+  '2028-10-09': '한글날',
+  '2028-12-25': '크리스마스',
+  // 2029
+  '2029-01-01': '신정',
+  '2029-02-12': '설날전날',
+  '2029-02-13': '설날',
+  '2029-02-14': '설날다음날',
+  '2029-03-01': '삼일절',
+  '2029-05-01': '근로자의날',
+  '2029-05-05': '어린이날',
+  '2029-05-07': '대체공휴일',
+  '2029-05-20': '부처님오신날',
+  '2029-05-21': '대체공휴일',
+  '2029-06-06': '현충일',
+  '2029-07-17': '제헌절',
+  '2029-08-15': '광복절',
+  '2029-09-21': '추석전날',
+  '2029-09-22': '추석',
+  '2029-09-23': '추석다음날',
+  '2029-09-24': '대체공휴일',
+  '2029-10-03': '개천절',
+  '2029-10-09': '한글날',
+  '2029-12-25': '크리스마스',
+  // 2030
+  '2030-01-01': '신정',
+  '2030-02-02': '설날전날',
+  '2030-02-03': '설날',
+  '2030-02-04': '설날다음날',
+  '2030-02-05': '대체공휴일',
+  '2030-03-01': '삼일절',
+  '2030-05-01': '근로자의날',
+  '2030-05-05': '어린이날',
+  '2030-05-06': '대체공휴일',
+  '2030-05-09': '부처님오신날',
+  '2030-06-06': '현충일',
+  '2030-07-17': '제헌절',
+  '2030-08-15': '광복절',
+  '2030-09-11': '추석전날',
+  '2030-09-12': '추석',
+  '2030-09-13': '추석다음날',
+  '2030-10-03': '개천절',
+  '2030-10-09': '한글날',
+  '2030-12-25': '크리스마스',
 }
 
 // 일정의 블록 색상 = 현장색상 (없으면 기존 color, 그것도 없으면 기본)
 const blockColor = (p) => p.site_color || p.color || DEFAULT_COLOR
-// 카테고리 (없으면 여백디자인으로 간주)
-const categoryOf = (p) => p.category || CATEGORIES[0]
+// 일정이 속한 캘린더(분류) 이름
+const categoryOf = (p) => (p.category || '').trim()
 // 정렬 순서: sort_order(숫자) 우선, 없으면 시작일 → id 순
 const orderRank = (p) =>
   typeof p.sort_order === 'number' ? p.sort_order : Number.MAX_SAFE_INTEGER
@@ -76,12 +177,12 @@ const byOrder = (a, b) =>
   (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0) ||
   (a.id ?? 0) - (b.id ?? 0)
 
-const emptyForm = (category = CATEGORIES[0]) => ({
+const emptyForm = (cal) => ({
   id: null,
   name: '',
-  category,
+  category: cal?.name || '',
   site_name: '',
-  site_color: DEFAULT_COLOR,
+  site_color: cal?.color || DEFAULT_COLOR,
   start_date: dayjs().format(DATE_FMT),
   end_date: dayjs().format(DATE_FMT),
   memo: '',
@@ -129,7 +230,12 @@ function Calendar() {
   const [modal, setModal] = useState(null) // form object or null
   const [detail, setDetail] = useState(null) // 상세보기로 보여줄 프로젝트 또는 null
   const [daySheet, setDaySheet] = useState(null) // 바텀시트로 보여줄 날짜(dayjs) 또는 null
-  const [tab, setTab] = useState(CATEGORIES[0]) // 활성 카테고리 탭
+  const [calendars, setCalendars] = useState([]) // Supabase calendars 테이블
+  const [calTableOk, setCalTableOk] = useState(true) // calendars 테이블 사용 가능 여부
+  const [selected, setSelected] = useState(() => new Set()) // 활성 캘린더(이름) 집합
+  const [menuOpen, setMenuOpen] = useState(false) // 캘린더 관리 시트
+  const [sites, setSites] = useState([]) // Supabase sites(현장 라벨) 테이블
+  const [siteTableOk, setSiteTableOk] = useState(true) // sites 테이블 사용 가능 여부
 
   // 프로젝트 → 상세보기 (바텀시트 / 블록 클릭 공용)
   const openDetail = useCallback((p) => {
@@ -140,15 +246,70 @@ function Calendar() {
   const prevMonth = useCallback(() => setCursor((c) => c.subtract(1, 'month')), [])
   const nextMonth = useCallback(() => setCursor((c) => c.add(1, 'month')), [])
 
-  // 좌우 스와이프로 이전/다음 달 이동 (모바일) — React 터치 이벤트로 단순 구현
-  const touchStartX = useRef(0)
-  const onTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX
-  }
-  const onTouchEnd = (e) => {
-    const dx = e.changedTouches[0].clientX - touchStartX.current
-    if (dx <= -50) nextMonth()
-    else if (dx >= 50) prevMonth()
+  // 좌우 스와이프로 이전/다음 달 이동 (모바일)
+  // 가로 스와이프로 판단되면 touchmove에서 preventDefault()로 세로 스크롤(흔들림)을 막는다.
+  // passive:false 로 등록해야 preventDefault()가 동작하므로 native 리스너로 직접 부착한다.
+  const calendarRef = useRef(null)
+  useEffect(() => {
+    const el = calendarRef.current
+    if (!el) return
+    const start = { x: 0, y: 0 }
+    let horizontal = false
+    const onStart = (e) => {
+      start.x = e.touches[0].clientX
+      start.y = e.touches[0].clientY
+      horizontal = false
+    }
+    const onMove = (e) => {
+      const dx = e.touches[0].clientX - start.x
+      const dy = e.touches[0].clientY - start.y
+      // 가로 이동이 세로보다 우세하면 가로 스와이프로 확정
+      if (!horizontal && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+        horizontal = true
+      }
+      // 가로 스와이프 중에는 세로 스크롤 차단
+      if (horizontal) e.preventDefault()
+    }
+    const onEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - start.x
+      const dy = e.changedTouches[0].clientY - start.y
+      if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) nextMonth()
+        else prevMonth()
+      }
+    }
+    el.addEventListener('touchstart', onStart, { passive: false })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd, { passive: false })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+    }
+  }, [prevMonth, nextMonth])
+
+  // 캘린더 이미지 저장 (PNG) — 범례 + 그리드 영역을 캡처
+  const captureRef = useRef(null)
+  const [saving, setSaving] = useState(false)
+  const saveImage = async () => {
+    const el = captureRef.current
+    if (!el || saving) return
+    setSaving(true)
+    try {
+      const canvas = await html2canvas(el, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+      })
+      const link = document.createElement('a')
+      link.download = `캘린더_${cursor.format('YYYY-MM')}.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } catch (e) {
+      alert('이미지 저장 실패: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   // 상세보기 → 수정 모달
@@ -169,9 +330,38 @@ function Calendar() {
     })
   }, [])
 
+  // 캘린더 목록만 다시 불러오기 (추가/삭제 후)
+  const reloadCalendars = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `${CAL_REST}?select=*&order=sort_order.asc,id.asc`,
+        { headers }
+      )
+      if (!res.ok) throw new Error(await res.text())
+      setCalTableOk(true)
+      setCalendars(await res.json())
+    } catch {
+      setCalTableOk(false)
+    }
+  }, [])
+
+  // 현장 라벨 목록만 다시 불러오기 (추가/삭제/색상변경 후)
+  const reloadSites = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `${SITE_REST}?select=*&order=sort_order.asc,id.asc`,
+        { headers }
+      )
+      if (!res.ok) throw new Error(await res.text())
+      setSiteTableOk(true)
+      setSites(await res.json())
+    } catch {
+      setSiteTableOk(false)
+    }
+  }, [])
+
+  // 일정만 다시 불러오기 (등록/수정/삭제 후)
   const load = useCallback(async () => {
-    setLoading(true)
-    setError('')
     try {
       const res = await fetch(`${REST}?select=*&order=start_date.asc`, {
         headers,
@@ -180,14 +370,281 @@ function Calendar() {
       setProjects(await res.json())
     } catch (e) {
       setError('데이터를 불러오지 못했습니다: ' + e.message)
+    }
+  }, [])
+
+  // 최초 로딩: 일정 + 캘린더를 함께 불러온다
+  const init = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const [pRes, cRes, sRes] = await Promise.all([
+        fetch(`${REST}?select=*&order=start_date.asc`, { headers }),
+        fetch(`${CAL_REST}?select=*&order=sort_order.asc,id.asc`, {
+          headers,
+        }).catch(() => null),
+        fetch(`${SITE_REST}?select=*&order=sort_order.asc,id.asc`, {
+          headers,
+        }).catch(() => null),
+      ])
+      if (!pRes.ok) throw new Error(await pRes.text())
+      const projs = await pRes.json()
+      setProjects(projs)
+
+      // 일정에 실제로 쓰인 분류 이름 (없는 캘린더 시드용)
+      const usedNames = [
+        ...new Set(projs.map((p) => categoryOf(p)).filter(Boolean)),
+      ]
+
+      let cals = []
+      if (cRes && cRes.ok) {
+        setCalTableOk(true)
+        cals = await cRes.json()
+        // 테이블이 비어 있으면 기존 일정의 분류로 캘린더를 시드
+        if (cals.length === 0 && usedNames.length) {
+          cals = await seedCalendars(usedNames)
+        }
+      } else {
+        // calendars 테이블이 없으면 일정에서 추출한 임시 캘린더로 표시
+        setCalTableOk(false)
+        cals = usedNames.map((name, i) => ({
+          id: `pseudo-${i}`,
+          name,
+          color: COLORS[i % COLORS.length],
+        }))
+      }
+      setCalendars(cals)
+
+      // 현장 라벨: 기존 일정의 (현장명, 현장색상)으로 시드
+      const usedSites = []
+      const seenSite = new Set()
+      for (const p of projs) {
+        const nm = (p.site_name || '').trim()
+        if (nm && !seenSite.has(nm)) {
+          seenSite.add(nm)
+          usedSites.push({ name: nm, color: p.site_color || DEFAULT_COLOR })
+        }
+      }
+      let siteRows = []
+      if (sRes && sRes.ok) {
+        setSiteTableOk(true)
+        siteRows = await sRes.json()
+        if (siteRows.length === 0 && usedSites.length) {
+          siteRows = await seedSites(usedSites)
+        }
+      } else {
+        setSiteTableOk(false)
+        siteRows = usedSites.map((s, i) => ({ id: `pseudo-${i}`, ...s }))
+      }
+      setSites(siteRows)
+    } catch (e) {
+      setError('데이터를 불러오지 못했습니다: ' + e.message)
     } finally {
       setLoading(false)
     }
   }, [])
 
+  // 기본 캘린더 시드 (서버 저장; 실패 시 로컬 임시값)
+  const seedCalendars = async (names) => {
+    const rows = names.map((name, i) => ({
+      name,
+      color: COLORS[i % COLORS.length],
+      sort_order: i,
+    }))
+    try {
+      const res = await fetch(CAL_REST, {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify(rows),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      return await res.json()
+    } catch {
+      return rows.map((r, i) => ({ id: `seed-${i}`, ...r }))
+    }
+  }
+
+  // 현장 라벨 시드 (서버 저장; 실패 시 로컬 임시값)
+  const seedSites = async (list) => {
+    const rows = list.map((s, i) => ({
+      name: s.name,
+      color: s.color,
+      sort_order: i,
+    }))
+    try {
+      const res = await fetch(SITE_REST, {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify(rows),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      return await res.json()
+    } catch {
+      return rows.map((r, i) => ({ id: `seed-${i}`, ...r }))
+    }
+  }
+
+  // 현장 라벨 추가
+  const addSite = async ({ name, color }) => {
+    const nm = (name || '').trim()
+    if (!nm) return
+    if (sites.some((s) => s.name === nm)) {
+      alert('같은 이름의 현장이 이미 있습니다.')
+      return
+    }
+    if (!siteTableOk) {
+      alert(
+        'Supabase에 sites 테이블이 없어 추가할 수 없습니다.\n(columns: name text, color text, sort_order int8)'
+      )
+      return
+    }
+    try {
+      const res = await fetch(SITE_REST, {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify({ name: nm, color, sort_order: sites.length }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      await reloadSites()
+    } catch (e) {
+      alert('현장 추가 실패: ' + e.message)
+    }
+  }
+
+  // 현장 라벨 삭제 (해당 현장의 일정은 유지)
+  const removeSite = async (site) => {
+    if (
+      !confirm(
+        `'${site.name}' 현장을 삭제하시겠습니까?\n(이 현장의 일정 자체는 삭제되지 않습니다)`
+      )
+    )
+      return
+    if (!siteTableOk) {
+      alert('Supabase에 sites 테이블이 없어 삭제할 수 없습니다.')
+      return
+    }
+    try {
+      const res = await fetch(`${SITE_REST}?id=eq.${site.id}`, {
+        method: 'DELETE',
+        headers,
+      })
+      if (!res.ok) throw new Error(await res.text())
+      await reloadSites()
+    } catch (e) {
+      alert('현장 삭제 실패: ' + e.message)
+    }
+  }
+
+  // 현장 라벨 색상 변경
+  // 현장 라벨 수정 (이름/색상) — patch = { name?, color? }
+  const updateSite = async (site, patch) => {
+    if (!siteTableOk) {
+      alert('Supabase에 sites 테이블이 없어 수정할 수 없습니다.')
+      return
+    }
+    const next = { ...patch }
+    if (next.name != null) {
+      next.name = next.name.trim()
+      if (!next.name) {
+        alert('현장 이름을 입력하세요.')
+        return
+      }
+      if (sites.some((s) => s.id !== site.id && s.name === next.name)) {
+        alert('같은 이름의 현장이 이미 있습니다.')
+        return
+      }
+    }
+    // 낙관적 반영
+    setSites((prev) =>
+      prev.map((s) => (s.id === site.id ? { ...s, ...next } : s))
+    )
+    try {
+      const res = await fetch(`${SITE_REST}?id=eq.${site.id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(next),
+      })
+      if (!res.ok) throw new Error(await res.text())
+    } catch (e) {
+      alert('현장 수정 실패: ' + e.message)
+      await reloadSites()
+    }
+  }
+
   useEffect(() => {
-    load()
-  }, [load])
+    init()
+  }, [init])
+
+  // 캘린더 목록이 바뀌면 선택 상태를 정리 (없어진 것 제거, 비면 전체 선택)
+  useEffect(() => {
+    setSelected((prev) => {
+      const names = calendars.map((c) => c.name)
+      const kept = new Set([...prev].filter((n) => names.includes(n)))
+      return kept.size ? kept : new Set(names)
+    })
+  }, [calendars])
+
+  // 캘린더 추가
+  const addCalendar = async ({ name, color }) => {
+    const nm = (name || '').trim()
+    if (!nm) return
+    if (calendars.some((c) => c.name === nm)) {
+      alert('같은 이름의 캘린더가 이미 있습니다.')
+      return
+    }
+    if (!calTableOk) {
+      alert(
+        'Supabase에 calendars 테이블이 없어 추가할 수 없습니다.\n(columns: name text, color text, sort_order int8)'
+      )
+      return
+    }
+    try {
+      const res = await fetch(CAL_REST, {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify({ name: nm, color, sort_order: calendars.length }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      setSelected((prev) => new Set([...prev, nm]))
+      await reloadCalendars()
+    } catch (e) {
+      alert('캘린더 추가 실패: ' + e.message)
+    }
+  }
+
+  // 캘린더 삭제 (해당 캘린더의 일정은 유지)
+  const removeCalendar = async (cal) => {
+    if (
+      !confirm(
+        `'${cal.name}' 캘린더를 삭제하시겠습니까?\n(이 캘린더의 일정 자체는 삭제되지 않습니다)`
+      )
+    )
+      return
+    if (!calTableOk) {
+      alert('Supabase에 calendars 테이블이 없어 삭제할 수 없습니다.')
+      return
+    }
+    try {
+      const res = await fetch(`${CAL_REST}?id=eq.${cal.id}`, {
+        method: 'DELETE',
+        headers,
+      })
+      if (!res.ok) throw new Error(await res.text())
+      await reloadCalendars()
+    } catch (e) {
+      alert('캘린더 삭제 실패: ' + e.message)
+    }
+  }
+
+  // 캘린더 토글 (탭 다중 선택)
+  const toggleCalendar = (name) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }
 
   const save = async (form) => {
     const payload = {
@@ -278,10 +735,22 @@ function Calendar() {
 
   // 달력 그리드 (일요일 시작)
   const weeks = useMemo(() => buildWeeks(cursor), [cursor])
-  // 활성 탭(카테고리)으로 필터링 + 정렬 순서 적용
+  // 활성 캘린더 집합 (아무것도 선택 안 하면 전체 표시)
+  const activeNames = useMemo(() => {
+    if (selected.size) return selected
+    return new Set(calendars.map((c) => c.name))
+  }, [selected, calendars])
+  // 새 일정 등록 시 기본 캘린더 (선택된 것 중 첫 번째, 없으면 첫 캘린더)
+  const defaultCal = useMemo(
+    () =>
+      calendars.find((c) => activeNames.has(c.name)) || calendars[0] || null,
+    [calendars, activeNames]
+  )
+  // 선택된 캘린더들로 필터링 + 정렬 순서 적용 (여러 캘린더 합쳐서 표시)
   const visibleProjects = useMemo(
-    () => projects.filter((p) => categoryOf(p) === tab).sort(byOrder),
-    [projects, tab]
+    () =>
+      projects.filter((p) => activeNames.has(categoryOf(p))).sort(byOrder),
+    [projects, activeNames]
   )
   // 반복 규칙을 반영한 날짜별 일정 맵 (보이는 6주 범위)
   const eventsByDate = useMemo(() => {
@@ -289,15 +758,15 @@ function Calendar() {
     const gridEnd = weeks[weeks.length - 1][6]
     return buildEventsByDate(visibleProjects, gridStart, gridEnd)
   }, [visibleProjects, weeks])
-  // 현장명 → 현장색상 매핑 (같은 현장명은 항상 같은 색)
-  const siteMap = useMemo(() => {
-    const m = {}
-    for (const p of projects) {
+  // 범례: 현재 보이는 일정의 현장명 + 현장색상 (현장명 있는 것만, 중복 제거)
+  const legend = useMemo(() => {
+    const m = new Map()
+    for (const p of visibleProjects) {
       const name = (p.site_name || '').trim()
-      if (name && p.site_color) m[name] = p.site_color
+      if (name && !m.has(name)) m.set(name, blockColor(p))
     }
-    return m
-  }, [projects])
+    return [...m.entries()].map(([name, color]) => ({ name, color }))
+  }, [visibleProjects])
 
   return (
     <div className="app">
@@ -307,6 +776,28 @@ function Calendar() {
           <span className="caret">⌄</span>
         </h1>
         <div className="topbar-icons">
+          <button
+            className="icon-btn"
+            onClick={() => history.back()}
+            aria-label="뒤로가기"
+          >
+            ←
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => setMenuOpen(true)}
+            aria-label="캘린더 관리"
+          >
+            ☰
+          </button>
+          <button
+            className="icon-btn"
+            onClick={saveImage}
+            disabled={saving}
+            aria-label="이미지 저장"
+          >
+            <DownloadIcon />
+          </button>
           <button className="icon-btn" onClick={prevMonth} aria-label="이전 달">
             ‹
           </button>
@@ -320,26 +811,50 @@ function Calendar() {
       </header>
 
       <div className="tabs">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c}
-            className={`tab ${tab === c ? 'active' : ''}`}
-            onClick={() => setTab(c)}
-          >
-            {tab === c && <span className="tab-check">✓</span>}
-            {c}
-          </button>
-        ))}
+        {calendars.length === 0 ? (
+          <span className="tabs-empty">
+            ☰ 버튼에서 캘린더를 추가하세요
+          </span>
+        ) : (
+          calendars.map((c) => {
+            const on = selected.has(c.name)
+            return (
+              <button
+                key={c.id ?? c.name}
+                className={`tab ${on ? 'active' : ''}`}
+                onClick={() => toggleCalendar(c.name)}
+              >
+                <span
+                  className="tab-dot"
+                  style={{ backgroundColor: c.color || DEFAULT_COLOR }}
+                />
+                {on && <span className="tab-check">✓</span>}
+                {c.name}
+              </button>
+            )
+          })
+        )}
       </div>
 
       {error && <div className="banner-error">{error}</div>}
       {loading && <div className="banner">불러오는 중…</div>}
 
-      <div
-        className="calendar"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
+      <div className="capture-area" ref={captureRef}>
+        {legend.length > 0 && (
+          <div className="legend">
+            {legend.map((s) => (
+              <span className="legend-item" key={s.name}>
+                <span
+                  className="legend-dot"
+                  style={{ backgroundColor: s.color }}
+                />
+                {s.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="calendar" ref={calendarRef}>
         <div className="weekday-row">
           {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
             <div
@@ -355,16 +870,17 @@ function Calendar() {
           <WeekRow
             key={wi}
             week={week}
-            eventsByDate={eventsByDate}
+            projects={visibleProjects}
             month={cursor}
             onClickDay={(day) => setDaySheet(day)}
           />
         ))}
+        </div>
       </div>
 
       <button
         className="fab"
-        onClick={() => setModal(emptyForm(tab))}
+        onClick={() => setModal(emptyForm(defaultCal))}
         aria-label="공사 등록"
       >
         +
@@ -379,7 +895,7 @@ function Calendar() {
           onAddNew={() => {
             setDaySheet(null)
             setModal({
-              ...emptyForm(tab),
+              ...emptyForm(defaultCal),
               start_date: daySheet.format(DATE_FMT),
               end_date: daySheet.format(DATE_FMT),
             })
@@ -400,13 +916,116 @@ function Calendar() {
       {modal && (
         <ProjectModal
           form={modal}
-          siteMap={siteMap}
+          calendars={calendars}
+          sites={sites}
+          siteTableOk={siteTableOk}
+          onAddSite={addSite}
+          onRemoveSite={removeSite}
+          onUpdateSite={updateSite}
           onChange={setModal}
           onClose={() => setModal(null)}
           onSave={save}
           onDelete={remove}
         />
       )}
+
+      {menuOpen && (
+        <CalendarManager
+          calendars={calendars}
+          calTableOk={calTableOk}
+          onAdd={addCalendar}
+          onRemove={removeCalendar}
+          onClose={() => setMenuOpen(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ---------------- 캘린더 관리 시트 (☰) ----------------
+function CalendarManager({ calendars, calTableOk, onAdd, onRemove, onClose }) {
+  const [name, setName] = useState('')
+  const [color, setColor] = useState(COLORS[0])
+
+  const submit = (e) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    onAdd({ name, color })
+    setName('')
+  }
+
+  return (
+    <div className="bs-backdrop" onClick={onClose}>
+      <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="bs-handle" />
+        <div className="bs-head">
+          <span className="bs-date">캘린더 관리</span>
+          <button type="button" className="bs-add" onClick={onClose}>
+            완료
+          </button>
+        </div>
+
+        {!calTableOk && (
+          <div className="banner-error" style={{ marginBottom: 10 }}>
+            Supabase에 calendars 테이블이 없습니다. (name text, color text,
+            sort_order int8)
+          </div>
+        )}
+
+        <div className="bs-list">
+          {calendars.length === 0 ? (
+            <div className="bs-empty">캘린더가 없습니다.</div>
+          ) : (
+            calendars.map((c) => (
+              <div key={c.id ?? c.name} className="bs-item">
+                <span
+                  className="bs-dot"
+                  style={{
+                    backgroundColor: c.color || DEFAULT_COLOR,
+                    margin: '0 10px 0 14px',
+                    alignSelf: 'center',
+                  }}
+                />
+                <span className="bs-item-body" style={{ padding: '12px 0' }}>
+                  <span className="bs-item-title">{c.name}</span>
+                </span>
+                <button
+                  type="button"
+                  className="cal-del"
+                  onClick={() => onRemove(c)}
+                  aria-label="캘린더 삭제"
+                >
+                  삭제
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <form className="cal-add" onSubmit={submit}>
+          <input
+            className="row-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="새 캘린더 이름"
+          />
+          <div className="color-picker">
+            {COLORS.map((c) => (
+              <button
+                type="button"
+                key={c}
+                className={`color-swatch ${color === c ? 'selected' : ''}`}
+                style={{ backgroundColor: c, color: c }}
+                onClick={() => setColor(c)}
+                aria-label={c}
+              />
+            ))}
+          </div>
+          <button type="submit" className="bs-add cal-add-btn">
+            + 캘린더 추가
+          </button>
+        </form>
+      </div>
     </div>
   )
 }
@@ -449,8 +1068,7 @@ function DetailView({ project: p, onEdit, onDelete, onClose }) {
           <div className="list-group">
             <div className="list-row">
               <span className="row-ic"><CalIcon /></span>
-              <span className="row-value">{categoryOf(p)}</span>
-              <span className="cat-badge">{catBadge(categoryOf(p))}</span>
+              <span className="row-value">{categoryOf(p) || '미분류'}</span>
             </div>
             <div className="list-row">
               <span className="row-ic"><ClockIcon /></span>
@@ -634,11 +1252,53 @@ function buildWeeks(cursor) {
   return weeks
 }
 
-// ---------------- 주 단위 행 (날짜 셀마다 공사 블록 표시) ----------------
-const MAX_VISIBLE = 4
+// ---------------- 주 단위 행 (여러 날 일정은 가로 막대로 이어서 표시) ----------------
+const MAX_LANES = 4 // 한 주에 보여줄 최대 막대 줄 수
+const BAR_TOP0 = 25 // 첫 막대의 위쪽 위치(px) — 날짜 숫자 영역 아래
+const LANE_H = 18 // 막대 한 줄 높이(px, 간격 포함)
+const barTop = (lane) => BAR_TOP0 + lane * LANE_H
 
-function WeekRow({ week, eventsByDate, month, onClickDay }) {
+// 한 주(week: 7일) 안에서 각 일정을 막대 세그먼트로 변환 + 겹치지 않게 lane 배치
+function weekSegments(week, projects) {
+  const weekStart = week[0]
+  const weekEnd = week[6]
+  const segs = []
+  for (const p of projects) {
+    const s = dayjs(p.start_date)
+    const e = dayjs(p.end_date)
+    if (e.isBefore(weekStart, 'day') || s.isAfter(weekEnd, 'day')) continue
+    const realStart = !s.isBefore(weekStart, 'day') // 이번 주에 시작
+    const realEnd = !e.isAfter(weekEnd, 'day') // 이번 주에 종료
+    const startCol = realStart ? Math.round(s.diff(weekStart, 'day')) : 0
+    const endCol = realEnd ? Math.round(e.diff(weekStart, 'day')) : 6
+    segs.push({ p, startCol, endCol, realStart, realEnd })
+  }
+  // lane 배치 (정렬 순서대로 그리디) — 같은 lane 안에서 열 범위가 겹치지 않도록
+  for (const seg of segs) {
+    let lane = 0
+    while (
+      segs.some(
+        (o) =>
+          o !== seg &&
+          o.lane === lane &&
+          !(o.endCol < seg.startCol || o.startCol > seg.endCol)
+      )
+    )
+      lane++
+    seg.lane = lane
+  }
+  return segs
+}
+
+function WeekRow({ week, projects, month, onClickDay }) {
   const today = dayjs()
+  const segs = weekSegments(week, projects)
+  const visibleSegs = segs.filter((s) => s.lane < MAX_LANES)
+  const hiddenSegs = segs.filter((s) => s.lane >= MAX_LANES)
+  // 열별 숨김 개수 (+N)
+  const hiddenByCol = Array(7).fill(0)
+  for (const s of hiddenSegs)
+    for (let c = s.startCol; c <= s.endCol; c++) hiddenByCol[c]++
 
   return (
     <div className="week-row">
@@ -647,15 +1307,6 @@ function WeekRow({ week, eventsByDate, month, onClickDay }) {
         const inMonth = day.month() === month.month()
         const isToday = day.isSame(today, 'day')
         const holiday = HOLIDAYS[dayKey]
-        // 이 날짜에 진행 중인 공사들 (날짜별 맵에서 조회)
-        const dayProjects = eventsByDate[dayKey] || []
-        // 최대 4개까지 블록 표시, 5개 이상이면 "+N개 더"
-        const visible =
-          dayProjects.length <= MAX_VISIBLE
-            ? dayProjects
-            : dayProjects.slice(0, MAX_VISIBLE)
-        const hidden = dayProjects.length - visible.length
-
         return (
           <div
             key={di}
@@ -670,26 +1321,56 @@ function WeekRow({ week, eventsByDate, month, onClickDay }) {
               {day.date()}
             </span>
             {holiday && <span className="holiday-name">{holiday}</span>}
-            <div className="day-events">
-              {visible.map((p) => (
-                <div
-                  key={p.id}
-                  className="event-chip"
-                  style={{ backgroundColor: blockColor(p) }}
-                  title={`${p.name}${p.site_name ? ' · ' + p.site_name : ''} (${p.start_date} ~ ${p.end_date})`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onClickDay(day)
-                  }}
-                >
-                  {chipText(p)}
-                </div>
-              ))}
-              {hidden > 0 && <div className="event-more">+{hidden}개 더</div>}
-            </div>
+            {hiddenByCol[di] > 0 && (
+              <span
+                className="event-more"
+                style={{ top: barTop(MAX_LANES) }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClickDay(day)
+                }}
+              >
+                +{hiddenByCol[di]}
+              </span>
+            )}
           </div>
         )
       })}
+
+      {/* 가로 막대 오버레이 (날짜 셀 위) */}
+      <div className="week-bars">
+        {visibleSegs.map((seg) => {
+          const span = seg.endCol - seg.startCol + 1
+          // 첫날(이번 주 시작 칸)에만 텍스트 표시
+          const showText = seg.realStart || seg.startCol === 0
+          return (
+            <button
+              type="button"
+              key={seg.p.id}
+              className={`event-bar ${seg.realStart ? '' : 'cont-left'} ${
+                seg.realEnd ? '' : 'cont-right'
+              }`}
+              style={{
+                top: barTop(seg.lane),
+                left: `${(seg.startCol / 7) * 100}%`,
+                width: `${(span / 7) * 100}%`,
+                backgroundColor: blockColor(seg.p),
+              }}
+              title={`${seg.p.name}${
+                seg.p.site_name ? ' · ' + seg.p.site_name : ''
+              } (${seg.p.start_date} ~ ${seg.p.end_date})`}
+              onClick={(e) => {
+                e.stopPropagation()
+                onClickDay(week[seg.startCol])
+              }}
+            >
+              {showText && (
+                <span className="event-bar-text">{chipText(seg.p)}</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -701,6 +1382,32 @@ function CalIcon() {
       <rect x="3" y="4.5" width="18" height="16" rx="3" stroke="currentColor" strokeWidth="1.6" />
       <path d="M3 9h18" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+// 이미지 저장(다운로드) 아이콘
+function DownloadIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 3v11m0 0 4-4m-4 4-4-4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }
@@ -834,23 +1541,46 @@ function DatePicker({ value, onChange }) {
   )
 }
 
-const catBadge = (c) => (c === '여백디자인' ? 'YEOBEAK' : c)
-
 // ---------------- 등록/수정 모달 (참고 디자인 풀스크린) ----------------
-function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete }) {
+function ProjectModal({
+  form,
+  calendars = [],
+  sites = [],
+  siteTableOk = true,
+  onAddSite,
+  onRemoveSite,
+  onUpdateSite,
+  onChange,
+  onClose,
+  onSave,
+  onDelete,
+}) {
   const set = (k, v) => onChange({ ...form, [k]: v })
+  const [sitePicker, setSitePicker] = useState(false) // 현장 선택 바텀시트
+  const [siteManager, setSiteManager] = useState(false) // 현장 라벨 관리 바텀시트
+  const [calPicker, setCalPicker] = useState(false) // 캘린더 선택 바텀시트
 
-  // 현장명 입력 시: 기존 현장이면 그 색상으로 자동 설정
-  const setSiteName = (v) => {
-    const matched = siteMap[v.trim()]
-    onChange({ ...form, site_name: v, ...(matched ? { site_color: matched } : {}) })
+  // 현장 선택 (라디오) — 이름 + 색상을 일정에 복사
+  const selectSite = (site) => {
+    if (site) onChange({ ...form, site_name: site.name, site_color: site.color })
+    else onChange({ ...form, site_name: '', site_color: DEFAULT_COLOR })
+    setSitePicker(false)
   }
 
-  // 카테고리 토글 (여백디자인 ↔ 개인)
-  const cycleCategory = () => {
-    const idx = CATEGORIES.indexOf(form.category)
-    set('category', CATEGORIES[(idx + 1) % CATEGORIES.length])
+  // 캘린더(분류) 선택 — 현장이 아직 없으면 캘린더 색을 기본 색으로 사용
+  const selectCalendar = (cal) => {
+    const hasSite = !!form.site_name
+    onChange({
+      ...form,
+      category: cal.name,
+      ...(hasSite ? {} : { site_color: cal.color || form.site_color }),
+    })
+    setCalPicker(false)
   }
+
+  // 현재 캘린더 색상 (행에 점으로 표시)
+  const curCalColor =
+    calendars.find((c) => c.name === form.category)?.color || null
 
   const submit = (e) => {
     e.preventDefault()
@@ -888,12 +1618,27 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
             autoFocus
           />
 
-          {/* 카테고리 */}
+          {/* 캘린더(분류) 선택 */}
           <div className="list-group">
-            <button type="button" className="list-row tappable" onClick={cycleCategory}>
+            <button
+              type="button"
+              className="list-row tappable"
+              onClick={() => setCalPicker(true)}
+            >
               <span className="row-ic"><CalIcon /></span>
-              <span className="row-value">{form.category}</span>
-              <span className="cat-badge">{catBadge(form.category)}</span>
+              {form.category ? (
+                <span className="row-value site-value">
+                  {curCalColor && (
+                    <span
+                      className="site-dot"
+                      style={{ backgroundColor: curCalColor }}
+                    />
+                  )}
+                  {form.category}
+                </span>
+              ) : (
+                <span className="row-value row-placeholder">캘린더 선택</span>
+              )}
               <span className="row-chevron">›</span>
             </button>
           </div>
@@ -943,39 +1688,27 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
             </div>
           </div>
 
-          {/* 현장명 + 현장색상 */}
+          {/* 현장 선택 (등록된 현장 목록에서 선택) */}
           <div className="list-group">
-            <div className="list-row">
+            <button
+              type="button"
+              className="list-row tappable"
+              onClick={() => setSitePicker(true)}
+            >
               <span className="row-ic"><SiteIcon /></span>
-              <input
-                className="row-input"
-                value={form.site_name}
-                onChange={(e) => setSiteName(e.target.value)}
-                placeholder="현장명"
-                list="site-names"
-              />
-              <datalist id="site-names">
-                {Object.keys(siteMap).map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            </div>
-            <div className="list-row list-row-color">
-              <span className="row-ic"><PaletteIcon /></span>
-              <span className="row-label">현장색상</span>
-              <div className="color-picker">
-                {COLORS.map((c) => (
-                  <button
-                    type="button"
-                    key={c}
-                    className={`color-swatch ${form.site_color === c ? 'selected' : ''}`}
-                    style={{ backgroundColor: c, color: c }}
-                    onClick={() => set('site_color', c)}
-                    aria-label={c}
+              {form.site_name ? (
+                <span className="row-value site-value">
+                  <span
+                    className="site-dot"
+                    style={{ backgroundColor: form.site_color }}
                   />
-                ))}
-              </div>
-            </div>
+                  {form.site_name}
+                </span>
+              ) : (
+                <span className="row-value row-placeholder">현장 선택</span>
+              )}
+              <span className="row-chevron">›</span>
+            </button>
           </div>
 
           {/* 메모 */}
@@ -1006,6 +1739,290 @@ function ProjectModal({ form, siteMap = {}, onChange, onClose, onSave, onDelete 
           )}
         </div>
       </form>
+
+      {calPicker && (
+        <CalendarPicker
+          calendars={calendars}
+          value={form.category}
+          onSelect={selectCalendar}
+          onClose={() => setCalPicker(false)}
+        />
+      )}
+
+      {sitePicker && (
+        <SitePicker
+          sites={sites}
+          value={form.site_name}
+          onSelect={selectSite}
+          onManage={() => {
+            setSitePicker(false)
+            setSiteManager(true)
+          }}
+          onClose={() => setSitePicker(false)}
+        />
+      )}
+
+      {siteManager && (
+        <SiteManager
+          sites={sites}
+          siteTableOk={siteTableOk}
+          onAdd={onAddSite}
+          onRemove={onRemoveSite}
+          onUpdate={onUpdateSite}
+          onClose={() => setSiteManager(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ---------------- 캘린더 선택 바텀시트 (라디오) ----------------
+function CalendarPicker({ calendars, value, onSelect, onClose }) {
+  return (
+    <div className="bs-backdrop over-modal" onClick={onClose}>
+      <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="bs-handle" />
+        <div className="bs-head">
+          <span className="bs-date">캘린더 선택</span>
+          <button type="button" className="bs-add" onClick={onClose}>
+            닫기
+          </button>
+        </div>
+        <div className="bs-list">
+          {calendars.length === 0 ? (
+            <div className="bs-empty">
+              등록된 캘린더가 없습니다.
+              <br />
+              상단 ☰ 에서 캘린더를 추가하세요.
+            </div>
+          ) : (
+            calendars.map((c) => {
+              const on = value === c.name
+              return (
+                <button
+                  type="button"
+                  key={c.id ?? c.name}
+                  className="radio-row"
+                  onClick={() => onSelect(c)}
+                >
+                  <span className="radio-mark">{on ? '◉' : '◯'}</span>
+                  <span
+                    className="site-dot"
+                    style={{ backgroundColor: c.color || DEFAULT_COLOR }}
+                  />
+                  <span className="radio-label">{c.name}</span>
+                </button>
+              )
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------- 현장 선택 바텀시트 (라디오) ----------------
+function SitePicker({ sites, value, onSelect, onManage, onClose }) {
+  return (
+    <div className="bs-backdrop over-modal" onClick={onClose}>
+      <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="bs-handle" />
+        <div className="bs-head">
+          <span className="bs-date">현장 선택</span>
+          <button type="button" className="bs-add" onClick={onClose}>
+            닫기
+          </button>
+        </div>
+        <div className="bs-list">
+          {/* 없음 */}
+          <button
+            type="button"
+            className="radio-row"
+            onClick={() => onSelect(null)}
+          >
+            <span className="radio-mark">{!value ? '◉' : '◯'}</span>
+            <span className="radio-label muted">현장 없음</span>
+          </button>
+          {sites.length === 0 ? (
+            <div className="bs-empty">
+              등록된 현장이 없습니다.
+              <br />
+              아래 ‘현장 라벨 관리’에서 추가하세요.
+            </div>
+          ) : (
+            sites.map((s) => {
+              const on = value === s.name
+              return (
+                <button
+                  type="button"
+                  key={s.id ?? s.name}
+                  className="radio-row"
+                  onClick={() => onSelect(s)}
+                >
+                  <span className="radio-mark">{on ? '◉' : '◯'}</span>
+                  <span
+                    className="site-dot"
+                    style={{ backgroundColor: s.color || DEFAULT_COLOR }}
+                  />
+                  <span className="radio-label">{s.name}</span>
+                </button>
+              )
+            })
+          )}
+        </div>
+        <button type="button" className="manage-btn" onClick={onManage}>
+          현장 라벨 관리
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------- 현장 라벨 관리 바텀시트 (추가/삭제/색상변경) ----------------
+function SiteManager({ sites, siteTableOk, onAdd, onRemove, onUpdate, onClose }) {
+  const [name, setName] = useState('')
+  const [color, setColor] = useState(COLORS[0])
+  const [editId, setEditId] = useState(null) // 수정 중인 현장 id
+  const [editName, setEditName] = useState('')
+  const [editColor, setEditColor] = useState(COLORS[0])
+
+  const submit = (e) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    onAdd({ name, color })
+    setName('')
+  }
+
+  const startEdit = (s) => {
+    setEditId(s.id)
+    setEditName(s.name)
+    setEditColor(s.color || DEFAULT_COLOR)
+  }
+  const saveEdit = (s) => {
+    if (!editName.trim()) {
+      alert('현장 이름을 입력하세요.')
+      return
+    }
+    onUpdate(s, { name: editName, color: editColor })
+    setEditId(null)
+  }
+
+  return (
+    <div className="bs-backdrop over-manager" onClick={onClose}>
+      <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="bs-handle" />
+        <div className="bs-head">
+          <span className="bs-date">현장 라벨 관리</span>
+          <button type="button" className="bs-add" onClick={onClose}>
+            완료
+          </button>
+        </div>
+
+        {!siteTableOk && (
+          <div className="banner-error" style={{ marginBottom: 10 }}>
+            Supabase에 sites 테이블이 없습니다. (name text, color text, sort_order
+            int8)
+          </div>
+        )}
+
+        <div className="bs-list">
+          {sites.length === 0 ? (
+            <div className="bs-empty">등록된 현장이 없습니다.</div>
+          ) : (
+            sites.map((s) => (
+              <div key={s.id ?? s.name} className="site-manage-item">
+                {editId === s.id ? (
+                  <div className="site-edit">
+                    <input
+                      className="row-input"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="현장 이름"
+                      autoFocus
+                    />
+                    <div className="color-picker">
+                      {COLORS.map((c) => (
+                        <button
+                          type="button"
+                          key={c}
+                          className={`color-swatch ${
+                            editColor === c ? 'selected' : ''
+                          }`}
+                          style={{ backgroundColor: c, color: c }}
+                          onClick={() => setEditColor(c)}
+                          aria-label={c}
+                        />
+                      ))}
+                    </div>
+                    <div className="site-edit-actions">
+                      <button
+                        type="button"
+                        className="site-edit-cancel"
+                        onClick={() => setEditId(null)}
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="button"
+                        className="site-edit-save"
+                        onClick={() => saveEdit(s)}
+                      >
+                        저장
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="site-manage-row">
+                    <span
+                      className="site-color-btn"
+                      style={{ backgroundColor: s.color || DEFAULT_COLOR }}
+                    />
+                    <span className="site-manage-name">{s.name}</span>
+                    <button
+                      type="button"
+                      className="site-edit-btn"
+                      onClick={() => startEdit(s)}
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      className="cal-del"
+                      onClick={() => onRemove(s)}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        <form className="cal-add" onSubmit={submit}>
+          <input
+            className="row-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="새 현장 이름"
+          />
+          <div className="color-picker">
+            {COLORS.map((c) => (
+              <button
+                type="button"
+                key={c}
+                className={`color-swatch ${color === c ? 'selected' : ''}`}
+                style={{ backgroundColor: c, color: c }}
+                onClick={() => setColor(c)}
+                aria-label={c}
+              />
+            ))}
+          </div>
+          <button type="submit" className="bs-add cal-add-btn">
+            + 현장 추가
+          </button>
+        </form>
+      </div>
     </div>
   )
 }
