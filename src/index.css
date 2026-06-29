@@ -1315,10 +1315,9 @@ body {
   .month-title {
     font-size: 17px;
   }
+  /* 모바일에서는 좌우 화살표 숨김 (PC에서만 표시) */
   .edge-arrow {
-    font-size: 15px;
-    opacity: 0.25;
-    padding: 8px 3px;
+    display: none;
   }
   .icon-btn {
     height: 30px;
