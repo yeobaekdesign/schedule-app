@@ -1466,3 +1466,84 @@ body {
     border-left-width: 6px;
   }
 }
+
+/* ---------- 이미지 저장(여러 달 한눈에) ---------- */
+.export-stage {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  z-index: -1;
+}
+.export-sheet {
+  width: 840px;
+  background: #fff;
+  padding: 24px 24px 28px;
+  box-sizing: border-box;
+}
+.export-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.export-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #111;
+}
+.export-range {
+  font-size: 15px;
+  font-weight: 600;
+  color: #888;
+}
+.export-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-bottom: 18px;
+}
+.export-months {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.export-month-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 6px;
+  padding-left: 2px;
+}
+/* 디바이스(모바일 미디어쿼리)와 무관하게 일정한 출력 레이아웃 강제 */
+.export-sheet .calendar {
+  --bar-top0: 28px;
+  --lane-h: 18px;
+}
+.export-sheet .week-row.has-holiday {
+  --bar-top0: 42px;
+}
+.export-sheet .day-cell {
+  height: 96px;
+}
+.export-sheet .day-num {
+  font-size: 13px;
+}
+.export-sheet .event-bar {
+  font-size: 11px;
+  padding: 0 4px;
+  letter-spacing: -0.2px;
+}
+/* 캡처 진행 안내 */
+.export-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  z-index: 200;
+}

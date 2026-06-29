@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
+import html2canvas from 'html2canvas'
 
 dayjs.locale('ko')
 
@@ -924,6 +925,64 @@ function Calendar() {
     })
   }, [sites])
 
+  // ---- 현재 필터된 일정을 여러 달에 걸쳐 한 이미지로 저장 ----
+  const exportRef = useRef(null)
+  const [exportData, setExportData] = useState(null) // {months, title} 또는 null
+  const startExport = () => {
+    const ps = visibleProjects
+    if (!ps.length) {
+      alert('표시할 일정이 없습니다. 현장 라벨로 프로젝트를 선택해 주세요.')
+      return
+    }
+    // 일정들이 걸친 월 범위 계산
+    let min = ps[0].start_date
+    let max = ps[0].end_date
+    for (const p of ps) {
+      if (p.start_date < min) min = p.start_date
+      if (p.end_date > max) max = p.end_date
+    }
+    const endM = dayjs(max).startOf('month')
+    const months = []
+    let m = dayjs(min).startOf('month')
+    while (!m.isAfter(endM, 'month') && months.length < 18) {
+      months.push(m)
+      m = m.add(1, 'month')
+    }
+    const title = selectedSites.size ? [...selectedSites].join(', ') : '전체 일정'
+    setExportData({ months, title })
+  }
+  // exportData가 설정되면 렌더 후 캡처 → PNG 다운로드
+  useEffect(() => {
+    if (!exportData) return
+    let cancelled = false
+    const run = async () => {
+      await new Promise((r) => setTimeout(r, 60)) // 렌더 대기
+      if (cancelled || !exportRef.current) return
+      try {
+        const canvas = await html2canvas(exportRef.current, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          useCORS: true,
+        })
+        if (cancelled) return
+        const first = exportData.months[0].format('YYYY.MM')
+        const last = exportData.months[exportData.months.length - 1].format('MM')
+        const link = document.createElement('a')
+        link.download = `${exportData.title}_${first}-${last}.png`
+        link.href = canvas.toDataURL('image/png')
+        link.click()
+      } catch (e) {
+        alert('이미지 저장 실패: ' + e.message)
+      } finally {
+        if (!cancelled) setExportData(null)
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [exportData])
+
   return (
     <div className="app">
       <header className="topbar">
@@ -937,6 +996,15 @@ function Calendar() {
           </button>
         </div>
         <div className="topbar-icons">
+          <button
+            className="icon-btn"
+            onClick={startExport}
+            disabled={!!exportData}
+            aria-label="이미지로 저장"
+            title="현재 보이는 일정을 기간 전체 달력 이미지로 저장"
+          >
+            <ExportIcon />
+          </button>
           <button
             className="icon-btn"
             onClick={() => init()}
@@ -1125,6 +1193,75 @@ function Calendar() {
           onUpdate={updateCalendar}
           onClose={() => setMenuOpen(false)}
         />
+      )}
+
+      {/* 이미지 저장용 오프스크린 멀티월 뷰 */}
+      {exportData && (
+        <>
+          <div className="export-overlay">이미지 생성 중…</div>
+          <div className="export-stage">
+            <div className="export-sheet" ref={exportRef}>
+              <div className="export-head">
+                <span className="export-title">{exportData.title}</span>
+                <span className="export-range">
+                  {exportData.months[0].format('YYYY.MM')} ~{' '}
+                  {exportData.months[exportData.months.length - 1].format(
+                    'YYYY.MM'
+                  )}
+                </span>
+              </div>
+              <div className="export-legend">
+                {legend
+                  .filter(
+                    (s) => selectedSites.size === 0 || selectedSites.has(s.name)
+                  )
+                  .map((s) => (
+                    <span className="legend-item" key={s.name}>
+                      <span
+                        className="legend-dot"
+                        style={{ backgroundColor: s.color }}
+                      />
+                      {s.name}
+                    </span>
+                  ))}
+              </div>
+              <div className="export-months">
+                {exportData.months.map((m) => (
+                  <div className="export-month" key={m.format('YYYY-MM')}>
+                    <div className="export-month-title">
+                      {m.format('YYYY년 M월')}
+                    </div>
+                    <div className="calendar">
+                      <div className="weekday-row">
+                        {['일', '월', '화', '수', '목', '금', '토'].map(
+                          (d, i) => (
+                            <div
+                              key={d}
+                              className={`weekday ${i === 0 ? 'sun' : ''} ${
+                                i === 6 ? 'sat' : ''
+                              }`}
+                            >
+                              {d}
+                            </div>
+                          )
+                        )}
+                      </div>
+                      {buildWeeks(m).map((week, wi) => (
+                        <WeekRow
+                          key={wi}
+                          week={week}
+                          projects={visibleProjects}
+                          month={m}
+                          onClickDay={() => {}}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
@@ -1606,6 +1743,26 @@ function WeekRow({ week, projects, month, onClickDay }) {
   )
 }
 
+// 이미지 저장(출력) 아이콘
+function ExportIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3v10m0 0 3.5-3.5M12 13 8.5 9.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
 // 새로고침 아이콘 (불러오는 중이면 회전)
 function RefreshIcon({ spinning }) {
   return (
