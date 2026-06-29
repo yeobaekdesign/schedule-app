@@ -1531,7 +1531,6 @@ function WeekRow({ week, projects, month, onClickDay }) {
             <span className={`day-num ${isToday ? 'today' : ''}`}>
               {day.date()}
             </span>
-            {holiday && <span className="holiday-name">{holiday}</span>}
             {hiddenByCol[di] > 0 && (
               <span
                 className="event-more-tri"
@@ -1575,6 +1574,22 @@ function WeekRow({ week, projects, month, onClickDay }) {
               )}
             </div>
           )
+        })}
+      </div>
+
+      {/* 공휴일 이름 오버레이 — 막대 위에 떠서 항상 보이도록 */}
+      <div className="week-holidays">
+        {week.map((day, di) => {
+          const h = HOLIDAYS[day.format(DATE_FMT)]
+          return h ? (
+            <span
+              key={di}
+              className="holiday-name"
+              style={{ left: `${(di / 7) * 100}%`, width: `${100 / 7}%` }}
+            >
+              {h}
+            </span>
+          ) : null
         })}
       </div>
     </div>

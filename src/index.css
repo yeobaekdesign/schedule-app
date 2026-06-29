@@ -611,17 +611,29 @@ body {
 .day-cell.holiday .day-num.today {
   color: #fff;
 }
+/* 공휴일 이름 오버레이 — 막대 위에 떠서 가려지지 않게 */
+.week-holidays {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3; /* 막대(week-bars)보다 위 */
+}
 .holiday-name {
+  position: absolute;
+  top: 25px; /* 날짜 숫자 바로 아래 */
+  box-sizing: border-box;
+  padding: 0 3px;
   font-size: 9px;
-  line-height: 1.1;
-  font-weight: 600;
+  line-height: 11px;
+  font-weight: 700;
   color: #ff3b30;
-  margin: -1px 0 1px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+  /* 막대 위에 떠도 글씨가 읽히도록 옅은 흰 배경 */
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
 }
 
 /* 여러 날 일정을 가로로 이어 표시하는 막대 오버레이 */
