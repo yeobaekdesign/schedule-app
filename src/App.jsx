@@ -929,8 +929,8 @@ function Calendar() {
   const exportRef = useRef(null)
   const [exportOpen, setExportOpen] = useState(false) // 출력 옵션 창
   const [exportData, setExportData] = useState(null) // {months, projects, title} 또는 null
-  // 다이얼로그에서 확정 → 캡처 데이터 구성
-  const runExport = ({ from, to, siteName }) => {
+  // 다이얼로그에서 확정 → 캡처 데이터 구성 (siteNames: 선택한 현장들, 비면 전체)
+  const runExport = ({ from, to, siteNames }) => {
     let startM = dayjs(from + '-01').startOf('month')
     let endM = dayjs(to + '-01').startOf('month')
     if (!startM.isValid() || !endM.isValid()) {
@@ -948,11 +948,12 @@ function Calendar() {
       months.push(m)
       m = m.add(1, 'month')
     }
-    // 프로젝트(현장) 선택 시 해당 현장만, 아니면 전체
-    const ps = siteName
-      ? projects.filter((p) => (p.site_name || '').trim() === siteName)
+    // 선택한 현장들만(여러 개 조합 가능), 아무것도 없으면 전체
+    const set = new Set(siteNames)
+    const ps = set.size
+      ? projects.filter((p) => set.has((p.site_name || '').trim()))
       : projects
-    const title = siteName || '전체 일정'
+    const title = set.size ? [...set].join(' + ') : '전체 일정'
     setExportOpen(false)
     setExportData({ months, projects: ps, title })
   }
@@ -1217,7 +1218,7 @@ function Calendar() {
           sites={sites}
           projects={projects}
           defaultMonth={cursor}
-          defaultSite={selectedSites.size === 1 ? [...selectedSites][0] : ''}
+          defaultSites={selectedSites}
           onConfirm={runExport}
           onClose={() => setExportOpen(false)}
         />
@@ -1298,27 +1299,35 @@ function Calendar() {
   )
 }
 
-// ---------------- 이미지 저장 옵션 (기간/프로젝트 선택) ----------------
-function ExportDialog({ sites, projects, defaultMonth, defaultSite, onConfirm, onClose }) {
-  const [siteName, setSiteName] = useState(defaultSite || '')
+// ---------------- 이미지 저장 옵션 (기간 + 여러 프로젝트 조합 선택) ----------------
+function ExportDialog({ sites, projects, defaultMonth, defaultSites, onConfirm, onClose }) {
+  const [selected, setSelected] = useState(() => new Set(defaultSites || []))
   const [from, setFrom] = useState(defaultMonth.format('YYYY-MM'))
   const [to, setTo] = useState(defaultMonth.format('YYYY-MM'))
 
-  // 현장(프로젝트) 선택 시 그 현장 일정이 걸친 기간을 자동으로 채움
-  const pickSite = (name) => {
-    setSiteName(name)
-    if (!name) return
-    const ps = projects.filter((p) => (p.site_name || '').trim() === name)
-    if (ps.length) {
-      let min = ps[0].start_date
-      let max = ps[0].end_date
-      for (const p of ps) {
-        if (p.start_date < min) min = p.start_date
-        if (p.end_date > max) max = p.end_date
-      }
-      setFrom(dayjs(min).format('YYYY-MM'))
-      setTo(dayjs(max).format('YYYY-MM'))
+  // 선택된 현장들의 일정이 걸친 전체 기간으로 자동 설정
+  const autoRange = (nameSet) => {
+    if (!nameSet.size) return
+    const ps = projects.filter((p) => nameSet.has((p.site_name || '').trim()))
+    if (!ps.length) return
+    let min = ps[0].start_date
+    let max = ps[0].end_date
+    for (const p of ps) {
+      if (p.start_date < min) min = p.start_date
+      if (p.end_date > max) max = p.end_date
     }
+    setFrom(dayjs(min).format('YYYY-MM'))
+    setTo(dayjs(max).format('YYYY-MM'))
+  }
+
+  const toggle = (name) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      autoRange(next)
+      return next
+    })
   }
 
   return (
@@ -1334,22 +1343,42 @@ function ExportDialog({ sites, projects, defaultMonth, defaultSite, onConfirm, o
 
         <div className="export-form">
           <div className="export-field">
-            <label className="export-label">프로젝트(현장)</label>
-            <select
-              className="export-select"
-              value={siteName}
-              onChange={(e) => pickSite(e.target.value)}
-            >
-              <option value="">전체 일정</option>
-              {sites.map((s) => (
-                <option key={s.id ?? s.name} value={s.name}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <label className="export-label">
+              프로젝트(현장) — 여러 개 선택 가능
+            </label>
+            <div className="export-sitelist">
+              <button
+                type="button"
+                className={`site-filter-row ${selected.size === 0 ? 'on' : ''}`}
+                onClick={() => setSelected(new Set())}
+              >
+                <span className="site-filter-name">전체 일정</span>
+                {selected.size === 0 && (
+                  <span className="site-filter-check">✓</span>
+                )}
+              </button>
+              {sites.map((s) => {
+                const on = selected.has(s.name)
+                return (
+                  <button
+                    type="button"
+                    key={s.id ?? s.name}
+                    className={`site-filter-row ${on ? 'on' : ''}`}
+                    onClick={() => toggle(s.name)}
+                  >
+                    <span
+                      className="site-filter-dot"
+                      style={{ backgroundColor: s.color || DEFAULT_COLOR }}
+                    />
+                    <span className="site-filter-name">{s.name}</span>
+                    {on && <span className="site-filter-check">✓</span>}
+                  </button>
+                )
+              })}
+            </div>
             <p className="export-hint">
-              현장을 고르면 그 프로젝트 기간이 자동으로 채워집니다. 기간은 직접
-              조정할 수 있어요.
+              현장을 고르면 선택한 프로젝트들의 전체 기간이 자동으로 채워집니다.
+              기간은 직접 조정할 수 있어요.
             </p>
           </div>
 
@@ -1378,7 +1407,7 @@ function ExportDialog({ sites, projects, defaultMonth, defaultSite, onConfirm, o
           <button
             type="button"
             className="bs-add cal-add-btn export-go"
-            onClick={() => onConfirm({ from, to, siteName })}
+            onClick={() => onConfirm({ from, to, siteNames: [...selected] })}
           >
             고화질 이미지로 저장
           </button>

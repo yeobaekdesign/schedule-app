@@ -1606,3 +1606,52 @@ body {
   font-size: 15px;
   margin-top: 4px;
 }
+
+/* 이미지 저장: 프로젝트 다중 선택 목록 */
+.export-sitelist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 38vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.site-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid transparent;
+  background: #f7f7f9;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.site-filter-row.on {
+  background: #e3e9f7;
+  border-color: var(--primary);
+}
+.site-filter-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  flex: none;
+}
+.site-filter-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.site-filter-check {
+  flex: none;
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 16px;
+}
