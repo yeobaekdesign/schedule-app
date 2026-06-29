@@ -1473,15 +1473,14 @@ function WeekRow({ week, projects, month, onClickDay }) {
             {holiday && <span className="holiday-name">{holiday}</span>}
             {hiddenByCol[di] > 0 && (
               <span
-                className="event-more"
-                style={{ top: barTop(MAX_LANES) }}
+                className="event-more-tri"
                 onClick={(e) => {
                   e.stopPropagation()
                   onClickDay(day)
                 }}
-              >
-                +{hiddenByCol[di]}
-              </span>
+                aria-label={`일정 ${hiddenByCol[di]}개 더 있음`}
+                title={`+${hiddenByCol[di]}`}
+              />
             )}
           </div>
         )
