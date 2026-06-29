@@ -672,6 +672,84 @@ function Calendar() {
     }
   }
 
+  // 캘린더 수정 (이름/색상) — patch = { name?, color? }
+  // calendars 테이블 수정 + 같은 category를 가진 모든 일정(project)을 일괄 업데이트
+  const updateCalendar = async (cal, patch) => {
+    if (!calTableOk) {
+      alert('Supabase에 calendars 테이블이 없어 수정할 수 없습니다.')
+      return
+    }
+    const next = { ...patch }
+    if (next.name != null) {
+      next.name = next.name.trim()
+      if (!next.name) {
+        alert('캘린더 이름을 입력하세요.')
+        return
+      }
+      if (calendars.some((c) => c.id !== cal.id && c.name === next.name)) {
+        alert('같은 이름의 캘린더가 이미 있습니다.')
+        return
+      }
+    }
+
+    const oldName = cal.name // 일정 필터(category)에 쓸 "수정 전" 이름
+    const resolvedName = next.name != null ? next.name : cal.name
+    const nameChanged = resolvedName !== oldName
+
+    // 낙관적 반영 (calendars + 같은 category를 가진 일정)
+    setCalendars((prev) =>
+      prev.map((c) => (c.id === cal.id ? { ...c, ...next } : c))
+    )
+    if (nameChanged) {
+      setProjects((prev) =>
+        prev.map((p) =>
+          (p.category || '').trim() === oldName
+            ? { ...p, category: resolvedName }
+            : p
+        )
+      )
+      // 선택 집합에서 이전 이름을 새 이름으로 교체
+      setSelected((prev) => {
+        if (!prev.has(oldName)) return prev
+        const n = new Set(prev)
+        n.delete(oldName)
+        n.add(resolvedName)
+        return n
+      })
+    }
+
+    try {
+      // 1) calendars 테이블 수정
+      const res = await fetch(`${CAL_REST}?id=eq.${cal.id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(next),
+      })
+      if (!res.ok) throw new Error(await res.text())
+
+      // 2) 이름이 바뀌었으면 같은 category를 가진 모든 일정 일괄 PATCH
+      if (nameChanged && oldName) {
+        const filter = `category=eq.${encodeURIComponent(oldName)}`
+        const pRes = await fetch(`${REST}?${filter}`, {
+          method: 'PATCH',
+          headers: { ...headers, Prefer: 'return=representation' },
+          body: JSON.stringify({ category: resolvedName }),
+        })
+        if (!pRes.ok) throw new Error(await pRes.text())
+        const updated = await pRes.json()
+        console.log(
+          `[updateCalendar] '${oldName}' → 일정 ${updated.length}건 업데이트`
+        )
+      }
+
+      await load()
+    } catch (e) {
+      alert('캘린더 수정 실패: ' + e.message)
+      await reloadCalendars()
+      await load()
+    }
+  }
+
   // 캘린더 토글 (탭 다중 선택)
   const toggleCalendar = (name) => {
     setSelected((prev) => {
@@ -971,6 +1049,7 @@ function Calendar() {
           calTableOk={calTableOk}
           onAdd={addCalendar}
           onRemove={removeCalendar}
+          onUpdate={updateCalendar}
           onClose={() => setMenuOpen(false)}
         />
       )}
@@ -979,15 +1058,39 @@ function Calendar() {
 }
 
 // ---------------- 캘린더 관리 시트 (☰) ----------------
-function CalendarManager({ calendars, calTableOk, onAdd, onRemove, onClose }) {
+function CalendarManager({
+  calendars,
+  calTableOk,
+  onAdd,
+  onRemove,
+  onUpdate,
+  onClose,
+}) {
   const [name, setName] = useState('')
   const [color, setColor] = useState(COLORS[0])
+  const [editId, setEditId] = useState(null) // 수정 중인 캘린더 id
+  const [editName, setEditName] = useState('')
+  const [editColor, setEditColor] = useState(COLORS[0])
 
   const submit = (e) => {
     e.preventDefault()
     if (!name.trim()) return
     onAdd({ name, color })
     setName('')
+  }
+
+  const startEdit = (c) => {
+    setEditId(c.id)
+    setEditName(c.name)
+    setEditColor(c.color || DEFAULT_COLOR)
+  }
+  const saveEdit = (c) => {
+    if (!editName.trim()) {
+      alert('캘린더 이름을 입력하세요.')
+      return
+    }
+    onUpdate(c, { name: editName, color: editColor })
+    setEditId(null)
   }
 
   return (
@@ -1013,31 +1116,77 @@ function CalendarManager({ calendars, calTableOk, onAdd, onRemove, onClose }) {
             <div className="bs-empty">캘린더가 없습니다.</div>
           ) : (
             calendars.map((c) => (
-              <div key={c.id ?? c.name} className="bs-item">
-                <span
-                  className="bs-dot"
-                  style={{
-                    backgroundColor: c.color || DEFAULT_COLOR,
-                    margin: '0 10px 0 14px',
-                    alignSelf: 'center',
-                  }}
-                />
-                <span className="bs-item-body" style={{ padding: '12px 0' }}>
-                  <span className="bs-item-title">{c.name}</span>
-                </span>
-                <button
-                  type="button"
-                  className="cal-del"
-                  onClick={() => onRemove(c)}
-                  aria-label="캘린더 삭제"
-                >
-                  삭제
-                </button>
+              <div key={c.id ?? c.name} className="site-manage-item">
+                {editId === c.id ? (
+                  <div className="site-edit">
+                    <input
+                      className="row-input"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="캘린더 이름"
+                      autoFocus
+                    />
+                    <div className="color-picker">
+                      {COLORS.map((cc) => (
+                        <button
+                          type="button"
+                          key={cc}
+                          className={`color-swatch ${
+                            editColor === cc ? 'selected' : ''
+                          }`}
+                          style={{ backgroundColor: cc, color: cc }}
+                          onClick={() => setEditColor(cc)}
+                          aria-label={cc}
+                        />
+                      ))}
+                    </div>
+                    <div className="site-edit-actions">
+                      <button
+                        type="button"
+                        className="site-edit-cancel"
+                        onClick={() => setEditId(null)}
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="button"
+                        className="site-edit-save"
+                        onClick={() => saveEdit(c)}
+                      >
+                        저장
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="site-manage-row">
+                    <span
+                      className="site-color-btn"
+                      style={{ backgroundColor: c.color || DEFAULT_COLOR }}
+                    />
+                    <span className="site-manage-name">{c.name}</span>
+                    <button
+                      type="button"
+                      className="site-edit-btn"
+                      onClick={() => startEdit(c)}
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      className="cal-del"
+                      onClick={() => onRemove(c)}
+                      aria-label="캘린더 삭제"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
 
+        {editId === null && (
         <form className="cal-add" onSubmit={submit}>
           <input
             className="row-input"
@@ -1061,6 +1210,7 @@ function CalendarManager({ calendars, calTableOk, onAdd, onRemove, onClose }) {
             + 캘린더 추가
           </button>
         </form>
+        )}
       </div>
     </div>
   )
