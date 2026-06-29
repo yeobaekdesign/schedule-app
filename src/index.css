@@ -1190,6 +1190,9 @@ body {
   background: #e3e9f7;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
 }
+.bs-item.bs-selected {
+  background: #e3e9f7;
+}
 .bs-grip {
   display: flex;
   align-items: center;
@@ -1198,12 +1201,39 @@ body {
   width: 38px;
   font-size: 18px;
   color: #b0b0b6;
-  cursor: grab;
+  background: transparent;
+  border: none;
+  cursor: pointer;
   user-select: none;
-  touch-action: none; /* 핸들에서 시작하는 터치 제스처는 스크롤 대신 드래그로 */
 }
-.bs-grip:active {
-  cursor: grabbing;
+.bs-grip.on {
+  color: #2c6bed;
+}
+/* 선택 시 나타나는 ↑↓ 순서 변경 버튼 */
+.bs-move {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding-right: 8px;
+}
+.bs-move-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 9px;
+  background: #2c6bed;
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bs-move-btn:disabled {
+  background: #c4cdde;
+  cursor: default;
+}
+.bs-move-btn:active:not(:disabled) {
+  opacity: 0.8;
 }
 .bs-item-main {
   display: flex;

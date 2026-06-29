@@ -1302,67 +1302,42 @@ function DetailView({ project: p, onEdit, onDelete, onClose }) {
   )
 }
 
-// ---------------- 날짜별 일정 바텀시트 (드래그로 순서 변경) ----------------
+// ---------------- 날짜별 일정 바텀시트 (점 버튼 선택 → ↑↓ 순서 변경) ----------------
 function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onClose }) {
   // 순서 변경이 즉시 반영되는 로컬 순서
   const [items, setItems] = useState(projects)
   useEffect(() => setItems(projects), [projects])
-  const [dragId, setDragId] = useState(null)
+  // 선택(활성화)된 항목 id — 선택 시 ↑↓ 버튼 표시
+  const [selectedId, setSelectedId] = useState(null)
 
-  // 핸들러 클로저가 항상 최신 순서를 보도록 ref로 추적
-  const itemsRef = useRef(items)
-  itemsRef.current = items
-  const dragIdRef = useRef(null) // 드래그 중인 항목 id
-  const movedRef = useRef(false) // 실제로 순서가 바뀌었는지
-
-  // 공통: id 기준으로 한 항목을 다른 항목 위치로 이동
-  const moveItem = (fromId, toId) => {
-    if (fromId == null || toId == null || String(fromId) === String(toId)) return
-    setItems((prev) => {
-      const from = prev.findIndex((x) => String(x.id) === String(fromId))
-      const to = prev.findIndex((x) => String(x.id) === String(toId))
-      if (from === -1 || to === -1 || from === to) return prev
-      const next = [...prev]
-      const [m] = next.splice(from, 1)
-      next.splice(to, 0, m)
-      movedRef.current = true
-      return next
-    })
+  // 점(⠿) 버튼 클릭 → 선택 토글
+  const toggleSelect = (e, id) => {
+    e.stopPropagation()
+    setSelectedId((cur) => (String(cur) === String(id) ? null : id))
   }
 
-  // ---- 마우스 / 터치 / 펜 공용 (Pointer Events) ----
-  // 그립(⠿)에서 드래그 시작 → 포인터 캡처로 이동/종료 이벤트를 한 곳에서 처리
-  const onPointerDown = (e, id) => {
-    e.preventDefault() // 텍스트 선택 / 네이티브 드래그 방지
-    dragIdRef.current = id
-    movedRef.current = false
-    setDragId(id)
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId)
-    } catch {
-      /* 캡처 미지원 환경 무시 */
-    }
-  }
-  const onPointerMove = (e) => {
-    if (dragIdRef.current == null) return
-    // 포인터 위치 아래의 행을 찾아 그 위치로 이동
-    const el = document.elementFromPoint(e.clientX, e.clientY)
-    const row = el && el.closest('[data-row]')
-    if (row) moveItem(dragIdRef.current, row.getAttribute('data-id'))
-  }
-  const endDrag = () => {
-    if (dragIdRef.current == null) return
-    dragIdRef.current = null
-    setDragId(null)
-    if (movedRef.current) {
-      movedRef.current = false
-      onReorder(itemsRef.current) // 최신 순서를 서버에 저장
-    }
+  // 선택된 항목을 위/아래로 한 칸 이동
+  const move = (e, dir) => {
+    e.stopPropagation()
+    const i = items.findIndex((x) => String(x.id) === String(selectedId))
+    if (i === -1) return
+    const j = dir === 'up' ? i - 1 : i + 1
+    if (j < 0 || j >= items.length) return
+    const next = [...items]
+    ;[next[i], next[j]] = [next[j], next[i]]
+    setItems(next)
+    onReorder(next) // 캘린더 즉시 반영 + sort_order 저장
   }
 
   return (
     <div className="bs-backdrop" onClick={onClose}>
-      <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bs-sheet"
+        onClick={(e) => {
+          e.stopPropagation()
+          setSelectedId(null) // 다른 곳 클릭 시 선택 해제
+        }}
+      >
         <div className="bs-handle" />
         <div className="bs-head">
           <span className="bs-date">{day.format('M월 D일 (ddd)')}</span>
@@ -1374,47 +1349,69 @@ function DayListSheet({ day, projects, onClickProject, onReorder, onAddNew, onCl
           {items.length === 0 ? (
             <div className="bs-empty">등록된 일정이 없습니다.</div>
           ) : (
-            items.map((p) => (
-              <div
-                key={p.id}
-                data-row
-                data-id={p.id}
-                className={`bs-item ${dragId === p.id ? 'bs-dragging' : ''}`}
-              >
-                <span
-                  className="bs-grip"
-                  onPointerDown={(e) => onPointerDown(e, p.id)}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                  aria-label="순서 변경 핸들"
+            items.map((p, idx) => {
+              const active = String(selectedId) === String(p.id)
+              return (
+                <div
+                  key={p.id}
+                  className={`bs-item ${active ? 'bs-selected' : ''}`}
                 >
-                  ⠿
-                </span>
-                <button
-                  type="button"
-                  className="bs-item-main"
-                  onClick={() => onClickProject(p)}
-                >
-                  <span
-                    className="bs-dot"
-                    style={{ backgroundColor: blockColor(p) }}
-                  />
-                  <span className="bs-item-body">
-                    <span className="bs-item-title">{p.name}</span>
-                    <span className="bs-item-sub">
-                      {p.site_name ? p.site_name + ' · ' : ''}
-                      {p.all_day
-                        ? '종일'
-                        : `${(p.start_time || '').slice(0, 5)}${
-                            p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
-                          }`}
+                  <button
+                    type="button"
+                    className={`bs-grip ${active ? 'on' : ''}`}
+                    onClick={(e) => toggleSelect(e, p.id)}
+                    aria-label="순서 변경 선택"
+                    aria-pressed={active}
+                  >
+                    ⠿
+                  </button>
+                  <button
+                    type="button"
+                    className="bs-item-main"
+                    onClick={() => onClickProject(p)}
+                  >
+                    <span
+                      className="bs-dot"
+                      style={{ backgroundColor: blockColor(p) }}
+                    />
+                    <span className="bs-item-body">
+                      <span className="bs-item-title">{p.name}</span>
+                      <span className="bs-item-sub">
+                        {p.site_name ? p.site_name + ' · ' : ''}
+                        {p.all_day
+                          ? '종일'
+                          : `${(p.start_time || '').slice(0, 5)}${
+                              p.end_time ? ' - ' + p.end_time.slice(0, 5) : ''
+                            }`}
+                      </span>
                     </span>
-                  </span>
-                  <span className="bs-chevron">›</span>
-                </button>
-              </div>
-            ))
+                    {!active && <span className="bs-chevron">›</span>}
+                  </button>
+                  {active && (
+                    <span className="bs-move">
+                      <button
+                        type="button"
+                        className="bs-move-btn"
+                        onClick={(e) => move(e, 'up')}
+                        disabled={idx === 0}
+                        aria-label="위로"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="bs-move-btn"
+                        onClick={(e) => move(e, 'down')}
+                        disabled={idx === items.length - 1}
+                        aria-label="아래로"
+                      >
+                        ↓
+                      </button>
+                    </span>
+                  )}
+                </div>
+              )
+            })
           )}
         </div>
       </div>
