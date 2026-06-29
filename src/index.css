@@ -83,6 +83,11 @@ body {
   gap: 12px;
   margin-bottom: 14px;
 }
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
 .month-title {
   margin: 0;
   font-size: 18px;
@@ -91,6 +96,7 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
 }
 .month-title .caret {
   font-size: 14px;
@@ -525,6 +531,9 @@ body {
 .calendar {
   background: var(--surface);
   position: relative;
+  /* 막대 세로 위치 변수 (PC: 날짜와 일정 사이 간격 넉넉히) */
+  --bar-top0: 34px;
+  --lane-h: 19px;
 }
 .weekday-row {
   display: grid;
@@ -623,6 +632,7 @@ body {
 }
 .event-bar {
   position: absolute;
+  top: calc(var(--bar-top0) + var(--bar-lane, 0) * var(--lane-h));
   height: 14px;
   box-sizing: border-box;
   padding: 0 3px;
@@ -1407,6 +1417,11 @@ body {
   }
   .day-cell {
     height: 88px;
+  }
+  /* 모바일은 기존의 촘촘한 간격 유지 */
+  .calendar {
+    --bar-top0: 22px;
+    --lane-h: 16px;
   }
   /* 모바일: 폰트 축소 + 패딩 최소화로 텍스트가 더 많이 보이게 */
   .event-bar {

@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
-import html2canvas from 'html2canvas'
 
 dayjs.locale('ko')
 
@@ -288,30 +287,6 @@ function Calendar() {
       el.removeEventListener('touchend', onEnd)
     }
   }, [prevMonth, nextMonth])
-
-  // 캘린더 이미지 저장 (PNG) — 범례 + 그리드 영역을 캡처
-  const captureRef = useRef(null)
-  const [saving, setSaving] = useState(false)
-  const saveImage = async () => {
-    const el = captureRef.current
-    if (!el || saving) return
-    setSaving(true)
-    try {
-      const canvas = await html2canvas(el, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-      })
-      const link = document.createElement('a')
-      link.download = `캘린더_${cursor.format('YYYY-MM')}.png`
-      link.href = canvas.toDataURL('image/png')
-      link.click()
-    } catch (e) {
-      alert('이미지 저장 실패: ' + e.message)
-    } finally {
-      setSaving(false)
-    }
-  }
 
   // 상세보기 → 수정 모달
   const openEdit = useCallback((p) => {
@@ -952,10 +927,18 @@ function Calendar() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1 className="month-title">
-          {cursor.format('YYYY년 M월')}
-          <span className="caret">⌄</span>
-        </h1>
+        <div className="month-nav">
+          <button className="icon-btn" onClick={prevMonth} aria-label="이전 달">
+            ‹
+          </button>
+          <h1 className="month-title">
+            {cursor.format('YYYY년 M월')}
+            <span className="caret">⌄</span>
+          </h1>
+          <button className="icon-btn" onClick={nextMonth} aria-label="다음 달">
+            ›
+          </button>
+        </div>
         <div className="topbar-icons">
           <button
             className="icon-btn"
@@ -965,21 +948,11 @@ function Calendar() {
             ☰
           </button>
           <button
-            className="icon-btn"
-            onClick={saveImage}
-            disabled={saving}
-            aria-label="이미지 저장"
+            className="icon-btn today-dot"
+            onClick={() => setCursor(dayjs().startOf('month'))}
+            aria-label="오늘"
           >
-            <DownloadIcon />
-          </button>
-          <button className="icon-btn" onClick={prevMonth} aria-label="이전 달">
-            ‹
-          </button>
-          <button className="icon-btn today-dot" onClick={() => setCursor(dayjs().startOf('month'))} aria-label="오늘">
             오늘
-          </button>
-          <button className="icon-btn" onClick={nextMonth} aria-label="다음 달">
-            ›
           </button>
         </div>
       </header>
@@ -1013,7 +986,7 @@ function Calendar() {
       {error && <div className="banner-error">{error}</div>}
       {loading && <div className="banner">불러오는 중…</div>}
 
-      <div className="capture-area" ref={captureRef}>
+      <div className="capture-area">
         {legend.length > 0 && (
           <div className="legend">
             <button
@@ -1498,9 +1471,7 @@ function buildWeeks(cursor) {
 
 // ---------------- 주 단위 행 (여러 날 일정은 가로 막대로 이어서 표시) ----------------
 const MAX_LANES = 3 // 한 주에 보여줄 최대 막대 줄 수 (초과분은 +N)
-const BAR_TOP0 = 22 // 첫 막대의 위쪽 위치(px) — 날짜 숫자 영역 아래
-const LANE_H = 16 // 막대 한 줄 높이(px, 간격 포함)
-const barTop = (lane) => BAR_TOP0 + lane * LANE_H
+// 막대 세로 위치는 CSS 변수(--bar-top0 / --lane-h)로 제어 — PC/모바일 간격 다르게
 
 // 한 주(week: 7일) 안에서 각 일정을 막대 세그먼트로 변환 + 겹치지 않게 lane 배치
 function weekSegments(week, projects) {
@@ -1594,7 +1565,7 @@ function WeekRow({ week, projects, month, onClickDay }) {
                 seg.realEnd ? '' : 'cont-right'
               }`}
               style={{
-                top: barTop(seg.lane),
+                '--bar-lane': seg.lane,
                 left: `${(seg.startCol / 7) * 100}%`,
                 width: `${(span / 7) * 100}%`,
                 backgroundColor: blockColor(seg.p),
@@ -1625,32 +1596,6 @@ function CalIcon() {
       <rect x="3" y="4.5" width="18" height="16" rx="3" stroke="currentColor" strokeWidth="1.6" />
       <path d="M3 9h18" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
-}
-// 이미지 저장(다운로드) 아이콘
-function DownloadIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M12 3v11m0 0 4-4m-4 4-4-4"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
     </svg>
   )
 }
