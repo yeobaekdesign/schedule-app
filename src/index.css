@@ -100,9 +100,9 @@ body {
   top: -1px;
 }
 
-/* 캘린더 좌우 가장자리 흐린 화살표 (이전/다음 달) */
+/* 달력 좌우 가장자리 중앙(약 9~15일 줄)의 흐린 화살표 (이전/다음 달) */
 .edge-arrow {
-  position: fixed;
+  position: absolute;
   top: 50%;
   transform: translateY(-50%);
   z-index: 20;
@@ -118,10 +118,10 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .edge-arrow.left {
-  left: max(0px, calc(50% - 380px));
+  left: 0;
 }
 .edge-arrow.right {
-  right: max(0px, calc(50% - 380px));
+  right: 0;
 }
 .edge-arrow:hover {
   opacity: 0.65;
@@ -470,6 +470,7 @@ body {
 /* ---------- 캘린더 ---------- */
 .calendar {
   background: var(--surface);
+  position: relative;
 }
 .weekday-row {
   display: grid;

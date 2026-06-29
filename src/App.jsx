@@ -986,24 +986,27 @@ function Calendar() {
             onClickDay={(day) => setDaySheet(day)}
           />
         ))}
+
+        {/* 달력 좌우 가장자리 중앙(약 9~15일 줄)의 흐린 화살표 — 이전/다음 달
+            (data-html2canvas-ignore: 이미지 저장 시 제외) */}
+        <button
+          className="edge-arrow left"
+          onClick={prevMonth}
+          aria-label="이전 달"
+          data-html2canvas-ignore="true"
+        >
+          ←
+        </button>
+        <button
+          className="edge-arrow right"
+          onClick={nextMonth}
+          aria-label="다음 달"
+          data-html2canvas-ignore="true"
+        >
+          →
+        </button>
         </div>
       </div>
-
-      {/* 좌우 가장자리 흐린 화살표 — 이전/다음 달 */}
-      <button
-        className="edge-arrow left"
-        onClick={prevMonth}
-        aria-label="이전 달"
-      >
-        ←
-      </button>
-      <button
-        className="edge-arrow right"
-        onClick={nextMonth}
-        aria-label="다음 달"
-      >
-        →
-      </button>
 
       <button
         className="fab"
