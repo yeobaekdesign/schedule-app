@@ -1510,9 +1510,11 @@ function WeekRow({ week, projects, month, onClickDay }) {
   const hiddenByCol = Array(7).fill(0)
   for (const s of hiddenSegs)
     for (let c = s.startCol; c <= s.endCol; c++) hiddenByCol[c]++
+  // 이번 주에 공휴일이 있으면 막대를 아래로 내려 공휴일 이름과 겹치지 않게
+  const hasHoliday = week.some((d) => HOLIDAYS[d.format(DATE_FMT)])
 
   return (
-    <div className="week-row">
+    <div className={`week-row ${hasHoliday ? 'has-holiday' : ''}`}>
       {week.map((day, di) => {
         const dayKey = day.format(DATE_FMT)
         const inMonth = day.month() === month.month()

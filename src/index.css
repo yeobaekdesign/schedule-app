@@ -558,6 +558,10 @@ body {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
+/* 공휴일이 있는 주: 막대를 더 아래에서 시작해 공휴일 이름과 안 겹치게 */
+.week-row.has-holiday {
+  --bar-top0: 44px;
+}
 .day-cell {
   position: relative;
   height: 112px; /* 고정 높이 — 일정이 많아도 셀이 늘어나지 않음 (PC) */
@@ -622,7 +626,7 @@ body {
   position: absolute;
   top: 25px; /* 날짜 숫자 바로 아래 */
   box-sizing: border-box;
-  padding: 0 3px;
+  padding: 0 2px;
   font-size: 9px;
   line-height: 11px;
   font-weight: 700;
@@ -631,9 +635,6 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* 막대 위에 떠도 글씨가 읽히도록 옅은 흰 배경 */
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
 }
 
 /* 여러 날 일정을 가로로 이어 표시하는 막대 오버레이 */
@@ -1434,6 +1435,10 @@ body {
   .calendar {
     --bar-top0: 29px;
     --lane-h: 16px;
+  }
+  /* 모바일 공휴일 주: 막대를 더 아래로 */
+  .week-row.has-holiday {
+    --bar-top0: 38px;
   }
   /* 모바일: 폰트 축소 + 패딩 최소화로 텍스트가 더 많이 보이게 */
   .event-bar {
