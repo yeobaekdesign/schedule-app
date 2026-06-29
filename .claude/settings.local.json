@@ -15,7 +15,11 @@
       "Bash(git commit -q -m ' *)",
       "Bash(git push *)",
       "Bash(git commit *)",
-      "Bash(netlify status *)"
+      "Bash(netlify status *)",
+      "Bash(node *)",
+      "Bash(sed -n '/^.topbar {/,/^}/p;/^.month-title {/,/^}/p;/^.tabs {/,/^}/p;/^.tab {/,/^}/p;/^.legend {/,/^}/p;/^.legend-item {/,/^}/p;/^.legend-dot {/,/^}/p' src/index.css)",
+      "Bash(sed -n '/^.app {/,/^}/p;/^.topbar {/,/^}/p' src/index.css)",
+      "Bash(npm install *)"
     ]
   }
 }
