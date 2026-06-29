@@ -1398,14 +1398,24 @@ body {
   .tab {
     padding: 4px 12px;
   }
+  /* 모바일: 범례를 한 줄 가로 스크롤로 — 세로 부피 최소화 */
   .legend {
-    gap: 3px 10px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
     margin-bottom: 6px;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .legend::-webkit-scrollbar {
+    display: none;
   }
   .legend-item {
+    flex: none;
     font-size: 11px;
-    padding: 6px 11px;
-    gap: 4px;
+    padding: 4px 10px;
+    gap: 5px;
   }
   .legend-dot {
     width: 8px;
