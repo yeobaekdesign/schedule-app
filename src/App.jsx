@@ -925,44 +925,61 @@ function Calendar() {
     })
   }, [sites])
 
-  // ---- 현재 필터된 일정을 여러 달에 걸쳐 한 이미지로 저장 ----
+  // ---- 기간/프로젝트를 지정해 여러 달을 한 이미지로 저장 ----
   const exportRef = useRef(null)
-  const [exportData, setExportData] = useState(null) // {months, title} 또는 null
-  const startExport = () => {
-    const ps = visibleProjects
-    if (!ps.length) {
-      alert('표시할 일정이 없습니다. 현장 라벨로 프로젝트를 선택해 주세요.')
+  const [exportOpen, setExportOpen] = useState(false) // 출력 옵션 창
+  const [exportData, setExportData] = useState(null) // {months, projects, title} 또는 null
+  // 다이얼로그에서 확정 → 캡처 데이터 구성
+  const runExport = ({ from, to, siteName }) => {
+    let startM = dayjs(from + '-01').startOf('month')
+    let endM = dayjs(to + '-01').startOf('month')
+    if (!startM.isValid() || !endM.isValid()) {
+      alert('기간을 올바르게 선택해 주세요.')
       return
     }
-    // 일정들이 걸친 월 범위 계산
-    let min = ps[0].start_date
-    let max = ps[0].end_date
-    for (const p of ps) {
-      if (p.start_date < min) min = p.start_date
-      if (p.end_date > max) max = p.end_date
+    if (endM.isBefore(startM, 'month')) {
+      const t = startM
+      startM = endM
+      endM = t
     }
-    const endM = dayjs(max).startOf('month')
     const months = []
-    let m = dayjs(min).startOf('month')
-    while (!m.isAfter(endM, 'month') && months.length < 18) {
+    let m = startM
+    while (!m.isAfter(endM, 'month') && months.length < 24) {
       months.push(m)
       m = m.add(1, 'month')
     }
-    const title = selectedSites.size ? [...selectedSites].join(', ') : '전체 일정'
-    setExportData({ months, title })
+    // 프로젝트(현장) 선택 시 해당 현장만, 아니면 전체
+    const ps = siteName
+      ? projects.filter((p) => (p.site_name || '').trim() === siteName)
+      : projects
+    const title = siteName || '전체 일정'
+    setExportOpen(false)
+    setExportData({ months, projects: ps, title })
   }
-  // exportData가 설정되면 렌더 후 캡처 → PNG 다운로드
+  // exportData가 설정되면 렌더 후 캡처 → 고화질 PNG 다운로드
   useEffect(() => {
     if (!exportData) return
     let cancelled = false
     const run = async () => {
-      await new Promise((r) => setTimeout(r, 60)) // 렌더 대기
+      await new Promise((r) => setTimeout(r, 80)) // 렌더 + 폰트 대기
       if (cancelled || !exportRef.current) return
       try {
-        const canvas = await html2canvas(exportRef.current, {
+        const el = exportRef.current
+        // 고화질(scale 3) 유지하되, 캔버스 면적 한계(특히 iOS)를 넘지 않게 보정
+        const w = el.offsetWidth
+        const h = el.offsetHeight
+        const MAX_AREA = 16000000 // iOS Safari 안전치
+        let scale = 3
+        if (w * h * scale * scale > MAX_AREA) {
+          scale = Math.max(1.5, Math.sqrt(MAX_AREA / (w * h)))
+        }
+        const canvas = await html2canvas(el, {
           backgroundColor: '#ffffff',
-          scale: 2,
+          scale,
           useCORS: true,
+          width: w,
+          height: h,
+          windowWidth: el.scrollWidth,
         })
         if (cancelled) return
         const first = exportData.months[0].format('YYYY.MM')
@@ -998,10 +1015,10 @@ function Calendar() {
         <div className="topbar-icons">
           <button
             className="icon-btn"
-            onClick={startExport}
+            onClick={() => setExportOpen(true)}
             disabled={!!exportData}
             aria-label="이미지로 저장"
-            title="현재 보이는 일정을 기간 전체 달력 이미지로 저장"
+            title="기간/프로젝트를 지정해 달력 이미지로 저장"
           >
             <ExportIcon />
           </button>
@@ -1195,6 +1212,17 @@ function Calendar() {
         />
       )}
 
+      {exportOpen && (
+        <ExportDialog
+          sites={sites}
+          projects={projects}
+          defaultMonth={cursor}
+          defaultSite={selectedSites.size === 1 ? [...selectedSites][0] : ''}
+          onConfirm={runExport}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
+
       {/* 이미지 저장용 오프스크린 멀티월 뷰 */}
       {exportData && (
         <>
@@ -1211,19 +1239,22 @@ function Calendar() {
                 </span>
               </div>
               <div className="export-legend">
-                {legend
-                  .filter(
-                    (s) => selectedSites.size === 0 || selectedSites.has(s.name)
+                {(() => {
+                  const names = new Set(
+                    exportData.projects.map((p) => (p.site_name || '').trim())
                   )
-                  .map((s) => (
-                    <span className="legend-item" key={s.name}>
-                      <span
-                        className="legend-dot"
-                        style={{ backgroundColor: s.color }}
-                      />
-                      {s.name}
-                    </span>
-                  ))}
+                  return legend
+                    .filter((s) => names.has(s.name))
+                    .map((s) => (
+                      <span className="legend-item" key={s.name}>
+                        <span
+                          className="legend-dot"
+                          style={{ backgroundColor: s.color }}
+                        />
+                        {s.name}
+                      </span>
+                    ))
+                })()}
               </div>
               <div className="export-months">
                 {exportData.months.map((m) => (
@@ -1250,7 +1281,7 @@ function Calendar() {
                         <WeekRow
                           key={wi}
                           week={week}
-                          projects={visibleProjects}
+                          projects={exportData.projects}
                           month={m}
                           onClickDay={() => {}}
                         />
@@ -1263,6 +1294,96 @@ function Calendar() {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+// ---------------- 이미지 저장 옵션 (기간/프로젝트 선택) ----------------
+function ExportDialog({ sites, projects, defaultMonth, defaultSite, onConfirm, onClose }) {
+  const [siteName, setSiteName] = useState(defaultSite || '')
+  const [from, setFrom] = useState(defaultMonth.format('YYYY-MM'))
+  const [to, setTo] = useState(defaultMonth.format('YYYY-MM'))
+
+  // 현장(프로젝트) 선택 시 그 현장 일정이 걸친 기간을 자동으로 채움
+  const pickSite = (name) => {
+    setSiteName(name)
+    if (!name) return
+    const ps = projects.filter((p) => (p.site_name || '').trim() === name)
+    if (ps.length) {
+      let min = ps[0].start_date
+      let max = ps[0].end_date
+      for (const p of ps) {
+        if (p.start_date < min) min = p.start_date
+        if (p.end_date > max) max = p.end_date
+      }
+      setFrom(dayjs(min).format('YYYY-MM'))
+      setTo(dayjs(max).format('YYYY-MM'))
+    }
+  }
+
+  return (
+    <div className="bs-backdrop" onClick={onClose}>
+      <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="bs-handle" />
+        <div className="bs-head">
+          <span className="bs-date">이미지로 저장</span>
+          <button type="button" className="bs-add" onClick={onClose}>
+            닫기
+          </button>
+        </div>
+
+        <div className="export-form">
+          <div className="export-field">
+            <label className="export-label">프로젝트(현장)</label>
+            <select
+              className="export-select"
+              value={siteName}
+              onChange={(e) => pickSite(e.target.value)}
+            >
+              <option value="">전체 일정</option>
+              {sites.map((s) => (
+                <option key={s.id ?? s.name} value={s.name}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <p className="export-hint">
+              현장을 고르면 그 프로젝트 기간이 자동으로 채워집니다. 기간은 직접
+              조정할 수 있어요.
+            </p>
+          </div>
+
+          <div className="export-range-row">
+            <div className="export-field">
+              <label className="export-label">시작 월</label>
+              <input
+                type="month"
+                className="export-select"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+            </div>
+            <span className="export-tilde">~</span>
+            <div className="export-field">
+              <label className="export-label">종료 월</label>
+              <input
+                type="month"
+                className="export-select"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="bs-add cal-add-btn export-go"
+            onClick={() => onConfirm({ from, to, siteName })}
+          >
+            고화질 이미지로 저장
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

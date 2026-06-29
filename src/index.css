@@ -1554,3 +1554,55 @@ body {
   font-weight: 600;
   z-index: 200;
 }
+
+/* ---------- 이미지 저장 옵션 다이얼로그 ---------- */
+.export-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 2px 8px;
+}
+.export-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.export-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.export-select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: #fff;
+}
+.export-hint {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.export-range-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.export-tilde {
+  padding-bottom: 11px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.export-go {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  margin-top: 4px;
+}
