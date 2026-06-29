@@ -930,7 +930,7 @@ function Calendar() {
   const [exportOpen, setExportOpen] = useState(false) // 출력 옵션 창
   const [exportData, setExportData] = useState(null) // {months, projects, title} 또는 null
   // 다이얼로그에서 확정 → 캡처 데이터 구성 (siteNames: 선택한 현장들, 비면 전체)
-  const runExport = ({ from, to, siteNames }) => {
+  const runExport = ({ from, to, siteNames, blank }) => {
     let startM = dayjs(from + '-01').startOf('month')
     let endM = dayjs(to + '-01').startOf('month')
     if (!startM.isValid() || !endM.isValid()) {
@@ -948,12 +948,19 @@ function Calendar() {
       months.push(m)
       m = m.add(1, 'month')
     }
-    // 선택한 현장들만(여러 개 조합 가능), 아무것도 없으면 전체
+    // 빈 달력이면 일정 없이, 아니면 선택한 현장들만(없으면 전체)
     const set = new Set(siteNames)
-    const ps = set.size
-      ? projects.filter((p) => set.has((p.site_name || '').trim()))
-      : projects
-    const title = set.size ? [...set].join(' + ') : '전체 일정'
+    let ps
+    let title
+    if (blank) {
+      ps = []
+      title = '빈 달력'
+    } else {
+      ps = set.size
+        ? projects.filter((p) => set.has((p.site_name || '').trim()))
+        : projects
+      title = set.size ? [...set].join(' + ') : '전체 일정'
+    }
     setExportOpen(false)
     setExportData({ months, projects: ps, title })
   }
@@ -1304,6 +1311,7 @@ function ExportDialog({ sites, projects, defaultMonth, defaultSites, onConfirm, 
   const [selected, setSelected] = useState(() => new Set(defaultSites || []))
   const [from, setFrom] = useState(defaultMonth.format('YYYY-MM'))
   const [to, setTo] = useState(defaultMonth.format('YYYY-MM'))
+  const [blank, setBlank] = useState(false) // 일정 없이 빈 달력
 
   // 선택된 현장들의 일정이 걸친 전체 기간으로 자동 설정
   const autoRange = (nameSet) => {
@@ -1342,7 +1350,16 @@ function ExportDialog({ sites, projects, defaultMonth, defaultSites, onConfirm, 
         </div>
 
         <div className="export-form">
-          <div className="export-field">
+          <button
+            type="button"
+            className={`export-blank-toggle ${blank ? 'on' : ''}`}
+            onClick={() => setBlank((v) => !v)}
+          >
+            <span className="export-checkbox">{blank ? '✓' : ''}</span>
+            일정 없이 빈 달력으로 저장
+          </button>
+
+          <div className={`export-field ${blank ? 'is-disabled' : ''}`}>
             <label className="export-label">
               프로젝트(현장) — 여러 개 선택 가능
             </label>
@@ -1407,7 +1424,9 @@ function ExportDialog({ sites, projects, defaultMonth, defaultSites, onConfirm, 
           <button
             type="button"
             className="bs-add cal-add-btn export-go"
-            onClick={() => onConfirm({ from, to, siteNames: [...selected] })}
+            onClick={() =>
+              onConfirm({ from, to, siteNames: [...selected], blank })
+            }
           >
             고화질 이미지로 저장
           </button>
