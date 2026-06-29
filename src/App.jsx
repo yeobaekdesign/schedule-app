@@ -236,6 +236,7 @@ function Calendar() {
   const [sites, setSites] = useState([]) // Supabase sites(현장 라벨) 테이블
   const [siteTableOk, setSiteTableOk] = useState(true) // sites 테이블 사용 가능 여부
   const [selectedSites, setSelectedSites] = useState(() => new Set()) // 활성 현장 필터(비면 전체)
+  const [siteFilterOpen, setSiteFilterOpen] = useState(false) // 모바일 현장 필터 시트
 
   // 프로젝트 → 상세보기 (바텀시트 / 블록 클릭 공용)
   const openDetail = useCallback((p) => {
@@ -988,33 +989,47 @@ function Calendar() {
 
       <div className="capture-area">
         {legend.length > 0 && (
-          <div className="legend">
+          <>
+            {/* PC: 인라인 칩 */}
+            <div className="legend legend-pc">
+              <button
+                type="button"
+                className={`legend-item ${selectedSites.size === 0 ? 'active' : ''}`}
+                onClick={() => setSelectedSites(new Set())}
+              >
+                전체
+              </button>
+              {legend.map((s) => {
+                const on = selectedSites.has(s.name)
+                return (
+                  <button
+                    type="button"
+                    className={`legend-item ${on ? 'active' : ''}`}
+                    key={s.name}
+                    onClick={() => toggleSite(s.name)}
+                  >
+                    <span
+                      className="legend-dot"
+                      style={{ backgroundColor: s.color }}
+                    />
+                    {s.name}
+                  </button>
+                )
+              })}
+            </div>
+            {/* 모바일: 현장 리스트 버튼 → 시트에서 체크 선택 */}
             <button
               type="button"
-              className={`legend-item ${selectedSites.size === 0 ? 'active' : ''}`}
-              onClick={() => setSelectedSites(new Set())}
-              data-html2canvas-ignore="true"
+              className="legend-filter-btn"
+              onClick={() => setSiteFilterOpen(true)}
             >
-              전체
+              <ListIcon />
+              <span>
+                현장{' '}
+                {selectedSites.size > 0 ? `(${selectedSites.size})` : '· 전체'}
+              </span>
             </button>
-            {legend.map((s) => {
-              const on = selectedSites.has(s.name)
-              return (
-                <button
-                  type="button"
-                  className={`legend-item ${on ? 'active' : ''}`}
-                  key={s.name}
-                  onClick={() => toggleSite(s.name)}
-                >
-                  <span
-                    className="legend-dot"
-                    style={{ backgroundColor: s.color }}
-                  />
-                  {s.name}
-                </button>
-              )
-            })}
-          </div>
+          </>
         )}
 
         <div className="calendar" ref={calendarRef}>
@@ -1122,6 +1137,62 @@ function Calendar() {
           onClose={() => setMenuOpen(false)}
         />
       )}
+
+      {siteFilterOpen && (
+        <SiteFilterSheet
+          sites={legend}
+          selectedSites={selectedSites}
+          onToggle={toggleSite}
+          onAll={() => setSelectedSites(new Set())}
+          onClose={() => setSiteFilterOpen(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ---------------- 현장 필터 시트 (모바일) — 체크로 다중 선택 ----------------
+function SiteFilterSheet({ sites, selectedSites, onToggle, onAll, onClose }) {
+  return (
+    <div className="bs-backdrop" onClick={onClose}>
+      <div className="bs-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="bs-handle" />
+        <div className="bs-head">
+          <span className="bs-date">현장 보기</span>
+          <button type="button" className="bs-add" onClick={onClose}>
+            완료
+          </button>
+        </div>
+        <div className="bs-list">
+          <button
+            type="button"
+            className="site-filter-row"
+            onClick={onAll}
+          >
+            <span className="site-filter-dot all" />
+            <span className="site-filter-name">전체</span>
+            {selectedSites.size === 0 && <span className="site-filter-check">✓</span>}
+          </button>
+          {sites.map((s) => {
+            const on = selectedSites.has(s.name)
+            return (
+              <button
+                type="button"
+                key={s.name}
+                className={`site-filter-row ${on ? 'on' : ''}`}
+                onClick={() => onToggle(s.name)}
+              >
+                <span
+                  className="site-filter-dot"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span className="site-filter-name">{s.name}</span>
+                {on && <span className="site-filter-check">✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -1596,6 +1667,15 @@ function CalIcon() {
       <rect x="3" y="4.5" width="18" height="16" rx="3" stroke="currentColor" strokeWidth="1.6" />
       <path d="M3 9h18" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+// 현장 필터(리스트) 아이콘 — 체크 표시 리스트
+function ListIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

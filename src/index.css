@@ -509,6 +509,66 @@ body {
   border-radius: 3px;
   flex: none;
 }
+/* 모바일 전용 현장 필터 버튼 (PC에서는 숨김) */
+.legend-filter-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  margin-bottom: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.legend-filter-btn .row-icon,
+.legend-filter-btn svg {
+  color: var(--primary);
+}
+/* 현장 필터 시트 행 (체크 다중 선택) */
+.site-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: none;
+  background: #f7f7f9;
+  border-radius: 12px;
+  padding: 13px 14px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.site-filter-row.on {
+  background: #e3e9f7;
+}
+.site-filter-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex: none;
+}
+.site-filter-dot.all {
+  background: linear-gradient(135deg, #ff3b30, #34c759, #2c6bed);
+}
+.site-filter-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+.site-filter-check {
+  flex: none;
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 16px;
+}
 
 /* ---------- 배너 ---------- */
 .banner,
@@ -1398,20 +1458,12 @@ body {
   .tab {
     padding: 4px 12px;
   }
-  /* 모바일: 범례 칩을 작게 — 줄바꿈은 유지하되 부피 최소화 */
-  .legend {
-    gap: 4px 6px;
-    margin-bottom: 6px;
+  /* 모바일: 인라인 칩 숨기고 현장 필터 버튼만 표시 */
+  .legend-pc {
+    display: none;
   }
-  .legend-item {
-    font-size: 10px;
-    padding: 2px 7px;
-    gap: 4px;
-    border-radius: 11px;
-  }
-  .legend-dot {
-    width: 7px;
-    height: 7px;
+  .legend-filter-btn {
+    display: inline-flex;
   }
   .weekday {
     padding: 4px 0;
