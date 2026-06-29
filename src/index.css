@@ -138,9 +138,10 @@ body {
 }
 .tab {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
   flex: 1 1 0;
   min-width: 0;
   gap: 5px;
