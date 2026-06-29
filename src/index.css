@@ -571,7 +571,7 @@ body {
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
 }
 /* 막대가 넘칠 때: 우측 상단 모서리에 작은 회색 삼각형으로 표시 */
 .event-more-tri {
@@ -580,8 +580,8 @@ body {
   right: 0;
   width: 0;
   height: 0;
-  border-top: 9px solid #b0b0b6;
-  border-left: 9px solid transparent;
+  border-top: 6px solid #b0b0b6;
+  border-left: 6px solid transparent;
   cursor: pointer;
   pointer-events: auto;
   z-index: 2;
@@ -1327,7 +1327,7 @@ body {
     font-size: 11px;
   }
   .event-more-tri {
-    border-top-width: 8px;
-    border-left-width: 8px;
+    border-top-width: 6px;
+    border-left-width: 6px;
   }
 }
