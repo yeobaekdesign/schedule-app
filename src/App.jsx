@@ -896,13 +896,6 @@ function Calendar() {
         <div className="topbar-icons">
           <button
             className="icon-btn"
-            onClick={() => history.back()}
-            aria-label="뒤로가기"
-          >
-            ←
-          </button>
-          <button
-            className="icon-btn"
             onClick={() => setMenuOpen(true)}
             aria-label="캘린더 관리"
           >
@@ -995,6 +988,22 @@ function Calendar() {
         ))}
         </div>
       </div>
+
+      {/* 좌우 가장자리 흐린 화살표 — 이전/다음 달 */}
+      <button
+        className="edge-arrow left"
+        onClick={prevMonth}
+        aria-label="이전 달"
+      >
+        ←
+      </button>
+      <button
+        className="edge-arrow right"
+        onClick={nextMonth}
+        aria-label="다음 달"
+      >
+        →
+      </button>
 
       <button
         className="fab"

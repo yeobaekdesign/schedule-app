@@ -85,19 +85,49 @@ body {
 }
 .month-title {
   margin: 0;
-  font-size: 26px;
+  font-size: 18px;
   font-weight: 800;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.4px;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 .month-title .caret {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text);
   position: relative;
-  top: -2px;
+  top: -1px;
+}
+
+/* 캘린더 좌우 가장자리 흐린 화살표 (이전/다음 달) */
+.edge-arrow {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 38px;
+  line-height: 1;
+  opacity: 0.22;
+  cursor: pointer;
+  padding: 16px 6px;
+  transition: opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.edge-arrow.left {
+  left: max(0px, calc(50% - 380px));
+}
+.edge-arrow.right {
+  right: max(0px, calc(50% - 380px));
+}
+.edge-arrow:hover {
+  opacity: 0.65;
+}
+.edge-arrow:active {
+  opacity: 0.85;
 }
 .topbar-icons {
   display: flex;
@@ -1282,7 +1312,12 @@ body {
     margin-bottom: 6px;
   }
   .month-title {
-    font-size: 19px;
+    font-size: 17px;
+  }
+  .edge-arrow {
+    font-size: 32px;
+    opacity: 0.25;
+    padding: 14px 4px;
   }
   .icon-btn {
     height: 30px;
