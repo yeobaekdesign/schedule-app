@@ -31,7 +31,9 @@
       "Bash(sips -g pixelWidth -g pixelHeight public/icons/icon-192.png public/icons/icon-512.png)",
       "WebSearch",
       "WebFetch(domain:superkts.com)",
-      "WebFetch(domain:kholidayz.com)"
+      "WebFetch(domain:kholidayz.com)",
+      "Bash(ls public *)",
+      "Bash(grep -rln \"serviceWorker\\\\|navigator.serviceWorker\\\\|registerSW\\\\|workbox\" src public index.html)"
     ]
   }
 }
