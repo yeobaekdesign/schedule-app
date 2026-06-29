@@ -1403,9 +1403,9 @@ function buildWeeks(cursor) {
 }
 
 // ---------------- 주 단위 행 (여러 날 일정은 가로 막대로 이어서 표시) ----------------
-const MAX_LANES = 4 // 한 주에 보여줄 최대 막대 줄 수
-const BAR_TOP0 = 25 // 첫 막대의 위쪽 위치(px) — 날짜 숫자 영역 아래
-const LANE_H = 18 // 막대 한 줄 높이(px, 간격 포함)
+const MAX_LANES = 3 // 한 주에 보여줄 최대 막대 줄 수 (초과분은 +N)
+const BAR_TOP0 = 22 // 첫 막대의 위쪽 위치(px) — 날짜 숫자 영역 아래
+const LANE_H = 16 // 막대 한 줄 높이(px, 간격 포함)
 const barTop = (lane) => BAR_TOP0 + lane * LANE_H
 
 // 한 주(week: 7일) 안에서 각 일정을 막대 세그먼트로 변환 + 겹치지 않게 lane 배치
