@@ -81,7 +81,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 20px;
 }
 .month-nav {
   display: flex;
@@ -180,7 +180,7 @@ body {
 .tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
   overflow-x: auto;
   padding-bottom: 2px;
 }
@@ -489,7 +489,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
 }
 .legend-item {
   display: inline-flex;
@@ -1395,9 +1395,9 @@ body {
   .app {
     padding: 6px 8px 72px;
   }
-  /* 상단 영역(헤더/탭/범례) 높이 최소화 → 캘린더 그리드를 최대한 노출 */
+  /* 상단 영역(헤더/탭/범례) — 모바일은 살짝만 띄워 한 화면 유지 */
   .topbar {
-    margin-bottom: 6px;
+    margin-bottom: 9px;
   }
   .month-title {
     font-size: 17px;
@@ -1415,7 +1415,7 @@ body {
     font-size: 13px;
   }
   .tabs {
-    margin-bottom: 6px;
+    margin-bottom: 9px;
     padding-bottom: 0;
   }
   .tab {
@@ -1424,7 +1424,7 @@ body {
   /* 모바일: 범례 칩을 작게 — 줄바꿈 유지하되 부피 최소화 */
   .legend {
     gap: 4px 6px;
-    margin-bottom: 6px;
+    margin-bottom: 9px;
   }
   .legend-item {
     font-size: 10px;
