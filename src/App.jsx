@@ -1292,6 +1292,7 @@ function Calendar() {
                           projects={exportData.projects}
                           month={m}
                           onClickDay={() => {}}
+                          hideToday
                         />
                       ))}
                     </div>
@@ -1815,7 +1816,7 @@ function weekSegments(week, projects) {
   return segs
 }
 
-function WeekRow({ week, projects, month, onClickDay }) {
+function WeekRow({ week, projects, month, onClickDay, hideToday }) {
   const today = dayjs()
   const segs = weekSegments(week, projects)
   const visibleSegs = segs.filter((s) => s.lane < MAX_LANES)
@@ -1832,7 +1833,7 @@ function WeekRow({ week, projects, month, onClickDay }) {
       {week.map((day, di) => {
         const dayKey = day.format(DATE_FMT)
         const inMonth = day.month() === month.month()
-        const isToday = day.isSame(today, 'day')
+        const isToday = !hideToday && day.isSame(today, 'day')
         const holiday = HOLIDAYS[dayKey]
         return (
           <div

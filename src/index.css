@@ -1561,6 +1561,10 @@ body {
   flex-direction: column;
   gap: 16px;
   padding: 4px 2px 8px;
+  /* 시트 안에서 스크롤되어 '저장' 버튼까지 도달 가능하게 */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .export-field {
   display: flex;
@@ -1612,8 +1616,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 38vh;
-  overflow-y: auto;
   padding: 2px;
 }
 .site-filter-row {
