@@ -939,6 +939,14 @@ function Calendar() {
         <div className="topbar-icons">
           <button
             className="icon-btn"
+            onClick={() => init()}
+            disabled={loading}
+            aria-label="새로고침"
+          >
+            <RefreshIcon spinning={loading} />
+          </button>
+          <button
+            className="icon-btn"
             onClick={() => setMenuOpen(true)}
             aria-label="캘린더 관리"
           >
@@ -1598,6 +1606,33 @@ function WeekRow({ week, projects, month, onClickDay }) {
   )
 }
 
+// 새로고침 아이콘 (불러오는 중이면 회전)
+function RefreshIcon({ spinning }) {
+  return (
+    <svg
+      className={spinning ? 'spin' : ''}
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 11a8 8 0 1 0-.9 4.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M20 4v5h-5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
 // ---- 라인 아이콘 세트 (참고 디자인) ----
 function CalIcon() {
   return (
