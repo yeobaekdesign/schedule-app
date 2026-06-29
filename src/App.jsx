@@ -1554,8 +1554,8 @@ function WeekRow({ week, projects, month, onClickDay }) {
           // 첫날(이번 주 시작 칸)에만 텍스트 표시
           const showText = seg.realStart || seg.startCol === 0
           return (
-            <button
-              type="button"
+            // 막대는 시각용(pointer-events:none) — 클릭은 아래 날짜 셀이 처리
+            <div
               key={seg.p.id}
               className={`event-bar ${seg.realStart ? '' : 'cont-left'} ${
                 seg.realEnd ? '' : 'cont-right'
@@ -1569,15 +1569,11 @@ function WeekRow({ week, projects, month, onClickDay }) {
               title={`${seg.p.name}${
                 seg.p.site_name ? ' · ' + seg.p.site_name : ''
               } (${seg.p.start_date} ~ ${seg.p.end_date})`}
-              onClick={(e) => {
-                e.stopPropagation()
-                onClickDay(week[seg.startCol])
-              }}
             >
               {showText && (
                 <span className="event-bar-text">{chipText(seg.p)}</span>
               )}
-            </button>
+            </div>
           )
         })}
       </div>

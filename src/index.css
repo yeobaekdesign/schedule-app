@@ -647,10 +647,8 @@ body {
   letter-spacing: -0.3px;
   cursor: pointer;
   overflow: hidden;
-  pointer-events: auto;
-}
-.event-bar:active {
-  opacity: 0.8;
+  /* 클릭은 아래 날짜 셀로 통과 → 막대를 눌러도 '클릭한 날'의 시트가 열림 */
+  pointer-events: none;
 }
 /* 주 경계를 넘어가는 막대는 바깥쪽 모서리를 각지게 */
 .event-bar.cont-left {
