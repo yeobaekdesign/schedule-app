@@ -1206,26 +1206,28 @@ function CalendarManager({
               <div key={c.id ?? c.name} className="site-manage-item">
                 {editId === c.id ? (
                   <div className="site-edit">
-                    <input
-                      className="row-input"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      placeholder="캘린더 이름"
-                      autoFocus
-                    />
-                    <div className="color-picker">
-                      {COLORS.map((cc) => (
-                        <button
-                          type="button"
-                          key={cc}
-                          className={`color-swatch ${
-                            editColor === cc ? 'selected' : ''
-                          }`}
-                          style={{ backgroundColor: cc, color: cc }}
-                          onClick={() => setEditColor(cc)}
-                          aria-label={cc}
-                        />
-                      ))}
+                    <div className="site-edit-fields">
+                      <input
+                        className="row-input"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="캘린더 이름"
+                        autoFocus
+                      />
+                      <div className="color-picker">
+                        {COLORS.map((cc) => (
+                          <button
+                            type="button"
+                            key={cc}
+                            className={`color-swatch ${
+                              editColor === cc ? 'selected' : ''
+                            }`}
+                            style={{ backgroundColor: cc, color: cc }}
+                            onClick={() => setEditColor(cc)}
+                            aria-label={cc}
+                          />
+                        ))}
+                      </div>
                     </div>
                     <div className="site-edit-actions">
                       <button
@@ -2184,26 +2186,28 @@ function SiteManager({
               <div key={s.id ?? s.name} className="site-manage-item">
                 {editId === s.id ? (
                   <div className="site-edit">
-                    <input
-                      className="row-input"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      placeholder="현장 이름"
-                      autoFocus
-                    />
-                    <div className="color-picker">
-                      {COLORS.map((c) => (
-                        <button
-                          type="button"
-                          key={c}
-                          className={`color-swatch ${
-                            editColor === c ? 'selected' : ''
-                          }`}
-                          style={{ backgroundColor: c, color: c }}
-                          onClick={() => setEditColor(c)}
-                          aria-label={c}
-                        />
-                      ))}
+                    <div className="site-edit-fields">
+                      <input
+                        className="row-input"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="현장 이름"
+                        autoFocus
+                      />
+                      <div className="color-picker">
+                        {COLORS.map((c) => (
+                          <button
+                            type="button"
+                            key={c}
+                            className={`color-swatch ${
+                              editColor === c ? 'selected' : ''
+                            }`}
+                            style={{ backgroundColor: c, color: c }}
+                            onClick={() => setEditColor(c)}
+                            aria-label={c}
+                          />
+                        ))}
+                      </div>
                     </div>
                     <div className="site-edit-actions">
                       <button
