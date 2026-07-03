@@ -24,6 +24,101 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
+// ---- Supabase Realtime (npm 패키지 없이 WebSocket으로 직접 구독) ----
+// project 테이블의 INSERT/UPDATE/DELETE 를 실시간으로 받아 onChange 를 호출한다.
+// 끊기면 자동 재연결, 하트비트로 연결 유지. 정리 함수를 반환한다.
+function subscribeProjectChanges(onChange) {
+  const wsUrl =
+    `${SUPABASE_URL.replace(/^http/, 'ws')}/realtime/v1/websocket` +
+    `?apikey=${SUPABASE_ANON_KEY}&vsn=1.0.0`
+  let ws = null
+  let heartbeat = null
+  let reconnectTimer = null
+  let refCount = 0
+  let closedByUs = false
+  const nextRef = () => String(++refCount)
+
+  const connect = () => {
+    ws = new WebSocket(wsUrl)
+
+    ws.onopen = () => {
+      // project 테이블 변경 구독
+      ws.send(
+        JSON.stringify({
+          topic: `realtime:public:${TABLE}`,
+          event: 'phx_join',
+          payload: {
+            config: {
+              broadcast: { ack: false, self: false },
+              presence: { key: '' },
+              postgres_changes: [
+                { event: '*', schema: 'public', table: TABLE },
+              ],
+              private: false,
+            },
+            access_token: SUPABASE_ANON_KEY,
+          },
+          ref: nextRef(),
+        })
+      )
+      // 하트비트(25초)로 연결 유지
+      heartbeat = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              topic: 'phoenix',
+              event: 'heartbeat',
+              payload: {},
+              ref: nextRef(),
+            })
+          )
+        }
+      }, 25000)
+    }
+
+    ws.onmessage = (e) => {
+      let msg
+      try {
+        msg = JSON.parse(e.data)
+      } catch {
+        return
+      }
+      if (msg.event === 'postgres_changes' && msg.payload?.data) {
+        onChange(msg.payload.data)
+      }
+    }
+
+    ws.onclose = () => {
+      clearInterval(heartbeat)
+      heartbeat = null
+      if (!closedByUs) reconnectTimer = setTimeout(connect, 2000) // 끊기면 재연결
+    }
+
+    ws.onerror = () => {
+      try {
+        ws.close()
+      } catch {
+        /* noop */
+      }
+    }
+  }
+
+  connect()
+
+  return () => {
+    closedByUs = true
+    clearTimeout(reconnectTimer)
+    clearInterval(heartbeat)
+    if (ws) {
+      try {
+        ws.close()
+      } catch {
+        /* noop */
+      }
+    }
+  }
+}
+
 // 공사 블록 색상 팔레트 (iOS 시스템 컬러 12 + 보조 톤 12 = 24색)
 const COLORS = [
   '#ff3b30', // red
@@ -618,6 +713,22 @@ function Calendar() {
   useEffect(() => {
     init()
   }, [init])
+
+  // 다른 사람/기기가 일정을 추가·수정·삭제하면 새로고침 없이 자동 반영.
+  // Supabase Realtime 으로 project 테이블 변경을 구독 → 일정만 다시 불러온다.
+  // 짧은 시간에 여러 변경이 오면 디바운스로 한 번만 로드한다.
+  useEffect(() => {
+    let t = null
+    const reload = () => {
+      clearTimeout(t)
+      t = setTimeout(() => load(), 300)
+    }
+    const unsubscribe = subscribeProjectChanges(reload)
+    return () => {
+      clearTimeout(t)
+      unsubscribe()
+    }
+  }, [load])
 
   // 캘린더 목록이 바뀌면 선택 상태를 정리 (없어진 것 제거, 비면 전체 선택)
   useEffect(() => {

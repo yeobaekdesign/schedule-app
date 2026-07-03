@@ -33,7 +33,8 @@
       "WebFetch(domain:superkts.com)",
       "WebFetch(domain:kholidayz.com)",
       "Bash(ls public *)",
-      "Bash(grep -rln \"serviceWorker\\\\|navigator.serviceWorker\\\\|registerSW\\\\|workbox\" src public index.html)"
+      "Bash(grep -rln \"serviceWorker\\\\|navigator.serviceWorker\\\\|registerSW\\\\|workbox\" src public index.html)",
+      "Bash(grep -n \"init\\(\\)\\\\|init]\\\\|\\\\[init\\\\|useEffect\\(\\(\\) => {\\\\s*$\" src/App.jsx)"
     ]
   }
 }
