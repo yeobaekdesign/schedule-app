@@ -24,6 +24,13 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
+// ---- 시크릿 일정 표시 여부 ----
+// 직원용(schedule-app): false → is_secret=true 일정은 숨김, 등록 시 토글 없음
+// 관리자용(schedule-admin): true → 모든 일정 표시, 등록 시 "시크릿 일정" 토글 노출
+const SHOW_SECRET = false
+// 직원용 앱은 시크릿 일정을 서버 쿼리에서 제외 (not.is.true = false 와 null 모두 포함)
+const SECRET_FILTER = SHOW_SECRET ? '' : '&is_secret=not.is.true'
+
 // ---- Supabase Realtime (npm 패키지 없이 WebSocket으로 직접 구독) ----
 // project 테이블의 INSERT/UPDATE/DELETE 를 실시간으로 받아 onChange 를 호출한다.
 // 끊기면 자동 재연결, 하트비트로 연결 유지. 정리 함수를 반환한다.
@@ -284,6 +291,7 @@ const emptyForm = (cal) => ({
   all_day: true,
   start_time: '09:00',
   end_time: '18:00',
+  is_secret: false,
 })
 
 // 캘린더 블록에 보여줄 라벨 (시간 / 제목)
@@ -399,6 +407,7 @@ function Calendar() {
       all_day: p.all_day ?? true,
       start_time: (p.start_time || '09:00').slice(0, 5),
       end_time: (p.end_time || '18:00').slice(0, 5),
+      is_secret: p.is_secret ?? false,
     })
   }, [])
 
@@ -435,9 +444,10 @@ function Calendar() {
   // 일정만 다시 불러오기 (등록/수정/삭제 후)
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${REST}?select=*&order=start_date.asc`, {
-        headers,
-      })
+      const res = await fetch(
+        `${REST}?select=*&order=start_date.asc${SECRET_FILTER}`,
+        { headers }
+      )
       if (!res.ok) throw new Error(await res.text())
       setProjects(await res.json())
     } catch (e) {
@@ -451,7 +461,9 @@ function Calendar() {
     setError('')
     try {
       const [pRes, cRes, sRes] = await Promise.all([
-        fetch(`${REST}?select=*&order=start_date.asc`, { headers }),
+        fetch(`${REST}?select=*&order=start_date.asc${SECRET_FILTER}`, {
+          headers,
+        }),
         fetch(`${CAL_REST}?select=*&order=sort_order.asc,id.asc`, {
           headers,
         }).catch(() => null),
@@ -657,7 +669,7 @@ function Calendar() {
       //    공백/한글은 encodeURIComponent로 인코딩만 하면 정확히 매칭된다.
       if (oldName) {
         const filter = `site_name=eq.${encodeURIComponent(oldName)}`
-        const pRes = await fetch(`${REST}?${filter}`, {
+        const pRes = await fetch(`${REST}?${filter}${SECRET_FILTER}`, {
           method: 'PATCH',
           headers: { ...headers, Prefer: 'return=representation' },
           body: JSON.stringify(projectPatch),
@@ -849,7 +861,7 @@ function Calendar() {
       // 2) 이름이 바뀌었으면 같은 category를 가진 모든 일정 일괄 PATCH
       if (nameChanged && oldName) {
         const filter = `category=eq.${encodeURIComponent(oldName)}`
-        const pRes = await fetch(`${REST}?${filter}`, {
+        const pRes = await fetch(`${REST}?${filter}${SECRET_FILTER}`, {
           method: 'PATCH',
           headers: { ...headers, Prefer: 'return=representation' },
           body: JSON.stringify({ category: resolvedName }),
@@ -891,6 +903,8 @@ function Calendar() {
       all_day: form.all_day,
       start_time: form.all_day ? null : form.start_time || null,
       end_time: form.all_day ? null : form.end_time || null,
+      // 관리자 앱에서만 토글 노출. 직원 앱은 항상 false 로 저장.
+      is_secret: SHOW_SECRET ? !!form.is_secret : false,
     }
     try {
       let res
@@ -2418,6 +2432,20 @@ function ProjectModal({
               />
             </div>
           </div>
+
+          {/* 시크릿 일정 (관리자 앱에서만 노출) */}
+          {SHOW_SECRET && (
+            <div className="list-group">
+              <div className="list-row">
+                <span className="row-ic">🔒</span>
+                <span className="row-value">시크릿 일정</span>
+                <Toggle
+                  on={!!form.is_secret}
+                  onChange={(v) => set('is_secret', v)}
+                />
+              </div>
+            </div>
+          )}
 
           {/* 삭제 */}
           {form.id && (

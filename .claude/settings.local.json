@@ -34,7 +34,11 @@
       "WebFetch(domain:kholidayz.com)",
       "Bash(ls public *)",
       "Bash(grep -rln \"serviceWorker\\\\|navigator.serviceWorker\\\\|registerSW\\\\|workbox\" src public index.html)",
-      "Bash(grep -n \"init\\(\\)\\\\|init]\\\\|\\\\[init\\\\|useEffect\\(\\(\\) => {\\\\s*$\" src/App.jsx)"
+      "Bash(grep -n \"init\\(\\)\\\\|init]\\\\|\\\\[init\\\\|useEffect\\(\\(\\) => {\\\\s*$\" src/App.jsx)",
+      "Bash(curl -s 'https://rrselzylrpcdpqglyyji.supabase.co/rest/v1/project?select=*&limit=1' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyc2VsenlscnBjZHBxZ2x5eWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTYzMzEsImV4cCI6MjA5NzMzMjMzMX0.9pxV2rYGvF2iRZ9OXfLxwJpS83s0ssRrVq8A771_NmY')",
+      "Bash(grep -n 'REST}?\\\\${filter}' src/App.jsx)",
+      "Read(//Users/goyunbyeong/Downloads/**)",
+      "Bash(rsync -a --exclude='.git' --exclude='dist' --exclude='.vercel' --exclude='.netlify' --exclude='.DS_Store' schedule-app/ schedule-admin/)"
     ]
   }
 }
